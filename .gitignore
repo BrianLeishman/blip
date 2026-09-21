@@ -1,0 +1,4 @@
+/build/
+/blip.local.json
+*.log
+.DS_Store

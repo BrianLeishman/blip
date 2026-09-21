@@ -1,0 +1,270 @@
+package main
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
+
+	"github.com/BrianLeishman/blip/dashboard"
+	ghdata "github.com/BrianLeishman/blip/internal/github"
+	"go.bug.st/serial"
+	"go.bug.st/serial/enumerator"
+)
+
+func main() {
+	configPath := flag.String("config", "blip.local.json", "GitHub configuration file")
+	port := flag.String("port", "", "serial port; auto-detect Feather when omitted")
+	probe := flag.Bool("probe", false, "show firmware events without sending dashboard data")
+	once := flag.Bool("once", false, "print GitHub snapshot and exit without connecting")
+	interval := flag.Duration("interval", 30*time.Second, "GitHub polling interval (minimum 15s)")
+	flag.Parse()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	var config ghdata.Config
+	if !*probe {
+		b, err := os.ReadFile(*configPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err = json.Unmarshal(b, &config); err != nil {
+			log.Fatal(err)
+		}
+		if err = ghdata.Validate(config); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if *once {
+		r, err := fetch(ctx, config)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, _ := json.MarshalIndent(r.Snapshot, "", "  ")
+		fmt.Println(string(b))
+		return
+	}
+	if *interval < 15*time.Second {
+		log.Fatal("interval must be at least 15s")
+	}
+	for ctx.Err() == nil {
+		name := *port
+		if name == "" {
+			var err error
+			name, err = detect(ctx)
+			if err != nil {
+				log.Print(err)
+				pause(ctx, 2*time.Second)
+				continue
+			}
+		}
+		if err := run(ctx, name, config, *probe, *interval); err != nil && ctx.Err() == nil {
+			log.Print(err)
+		}
+		pause(ctx, 2*time.Second)
+	}
+}
+func pause(ctx context.Context, d time.Duration) {
+	select {
+	case <-ctx.Done():
+	case <-time.After(d):
+	}
+}
+func detect(ctx context.Context) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	ports, err := enumerator.GetDetailedPortsList()
+	if err != nil {
+		return "", err
+	}
+	var matches []string
+	for _, p := range ports {
+		if p.IsUSB && strings.EqualFold(p.VID, "239A") && strings.HasPrefix(filepath.Base(p.Name), "cu.") {
+			matches = append(matches, p.Name)
+		}
+	}
+	if runtime.GOOS != "darwin" {
+		for _, p := range ports {
+			if p.IsUSB && strings.EqualFold(p.VID, "239A") {
+				matches = append(matches, p.Name)
+			}
+		}
+	}
+	if len(matches) != 1 {
+		return "", fmt.Errorf("found %d Adafruit serial devices; connect blip or use -port", len(matches))
+	}
+	return matches[0], nil
+}
+func fetch(ctx context.Context, c ghdata.Config) (ghdata.Result, error) {
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	return ghdata.Fetch(ctx, c)
+}
+
+type update struct {
+	result ghdata.Result
+	err    error
+}
+
+func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval time.Duration) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	p, err := serial.Open(name, &serial.Mode{BaudRate: 115200})
+	if err != nil {
+		return err
+	}
+	defer p.Close()
+	// Setting DTR makes USB CDC output available on the device.
+	if err = p.SetDTR(true); err != nil {
+		return err
+	}
+	log.Printf("Connected to %s", name)
+	events := make(chan dashboard.Event, 16)
+	readErr := make(chan error, 1)
+	go func() {
+		scanner := bufio.NewScanner(p)
+		for scanner.Scan() {
+			var e dashboard.Event
+			if json.Unmarshal(scanner.Bytes(), &e) == nil {
+				select {
+				case events <- e:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+		err := scanner.Err()
+		if err == nil {
+			err = errors.New("device disconnected")
+		}
+		readErr <- err
+	}()
+	updates := make(chan update, 1)
+	if !probe {
+		go func() {
+			for {
+				r, e := fetch(ctx, c)
+				select {
+				case updates <- update{r, e}:
+				case <-ctx.Done():
+					return
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(interval):
+				}
+			}
+		}()
+	}
+	current := ghdata.Result{URLs: map[string]string{}}
+	var wire []byte
+	var lastSend, lastFetch, lastOpen time.Time
+	send := func() error {
+		if len(wire) == 0 {
+			return nil
+		}
+		for off := 0; off < len(wire); {
+			end := off + 64
+			if end > len(wire) {
+				end = len(wire)
+			}
+			n, e := p.Write(wire[off:end])
+			if e != nil {
+				return e
+			}
+			if n == 0 {
+				return errors.New("zero byte serial write")
+			}
+			off += n
+			time.Sleep(2 * time.Millisecond)
+		}
+		lastSend = time.Now()
+		return nil
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-readErr:
+			return err
+		case u := <-updates:
+			if u.err != nil {
+				log.Printf("GitHub refresh failed: %v", u.err)
+				continue
+			}
+			current = u.result
+			lastFetch = time.Now()
+			// Bound the wire format to the firmware's fixed input buffer.
+			for i := range current.Snapshot.Rows {
+				r := &current.Snapshot.Rows[i]
+				runes := []rune(r.Title)
+				if len(runes) > 100 {
+					r.Title = string(runes[:100])
+				}
+			}
+			b, e := json.Marshal(current.Snapshot)
+			if e != nil {
+				return e
+			}
+			if len(b) >= 16384 {
+				return errors.New("snapshot exceeds device buffer")
+			}
+			wire = append(b, '\n')
+			if e = send(); e != nil {
+				return e
+			}
+			log.Printf("Dashboard refreshed: %d rows", len(current.Snapshot.Rows))
+		case e := <-events:
+			switch e.Kind {
+			case "hello":
+				if probe {
+					log.Printf("Firmware heartbeat; encoder error=%q", e.Error)
+				}
+				if e.Error != "" {
+					log.Printf("Device: %s", e.Error)
+				}
+				if len(wire) > 0 && e.Revision != current.Snapshot.Revision && time.Since(lastFetch) < 60*time.Second && time.Since(lastSend) > 3*time.Second {
+					if err = send(); err != nil {
+						return err
+					}
+				}
+			case "ack":
+				log.Printf("Device acknowledged snapshot %s", e.Revision)
+			case "turn", "click":
+				if probe {
+					log.Printf("%s position=%d", e.Kind, e.Position)
+				}
+			case "open":
+				if e.Revision != current.Snapshot.Revision || time.Since(lastFetch) > 90*time.Second || time.Since(lastOpen) < 500*time.Millisecond {
+					continue
+				}
+				link, ok := current.URLs[e.ID]
+				if !ok || !ghdata.SafeURL(link) {
+					continue
+				}
+				command := "open"
+				if runtime.GOOS != "darwin" {
+					command = "xdg-open"
+				}
+				if err = exec.CommandContext(ctx, command, link).Run(); err != nil {
+					log.Printf("Open browser: %v", err)
+				} else {
+					lastOpen = time.Now()
+					log.Printf("Opened %s", e.ID)
+				}
+			}
+		}
+	}
+}

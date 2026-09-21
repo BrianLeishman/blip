@@ -1,0 +1,7 @@
+{
+  "repositories": [
+    "your-name/your-repository"
+  ],
+  "required_approvals": 2,
+  "urgent_query": "org:YOUR_ORG is:issue is:open field.priority:Urgent sort:updated-asc"
+}
