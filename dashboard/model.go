@@ -1,14 +1,17 @@
 // Package dashboard is the small shared wire model used by the Mac and device.
 package dashboard
 
+import "strings"
+
 const MaxRows = 60
 
 type Row struct {
-	Detail  string `json:"detail,omitempty"`
-	ID      string `json:"id"`
-	Section string `json:"section"`
-	Title   string `json:"title"`
-	Badge   string `json:"badge,omitempty"`
+	ChecksRunning bool   `json:"checksRunning,omitempty"`
+	Detail        string `json:"detail,omitempty"`
+	ID            string `json:"id"`
+	Section       string `json:"section"`
+	Title         string `json:"title"`
+	Badge         string `json:"badge,omitempty"`
 }
 type Snapshot struct {
 	Version  int    `json:"version"`
@@ -32,4 +35,26 @@ func Selected(rows []Row, id string) int {
 		}
 	}
 	return 0
+}
+
+// SameContent ignores refresh revisions while comparing dashboard content and order.
+func (s Snapshot) SameContent(next Snapshot) bool {
+	if s.Version != next.Version || s.Status != next.Status || len(s.Rows) != len(next.Rows) {
+		return false
+	}
+	for i, row := range s.Rows {
+		if row != next.Rows[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Identity keeps the item number first so long repository names cannot hide it.
+func (r Row) Identity() string {
+	parts := strings.Split(r.ID, "/")
+	if len(parts) != 4 {
+		return ""
+	}
+	return "#" + parts[3] + " " + parts[0] + "/" + parts[1]
 }

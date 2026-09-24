@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/BrianLeishman/blip/dashboard"
 )
@@ -14,18 +16,28 @@ const urgentQuery = `query($search:String!,$cursor:String){
  search(query:$search,type:ISSUE_ADVANCED,first:100,after:$cursor){
   issueCount pageInfo{hasNextPage endCursor}
   nodes{...on Issue{
-   number title state repository{nameWithOwner}
+   number title state repository{nameWithOwner isArchived}
    issueFieldValues(first:100){pageInfo{hasNextPage} nodes{
     ...on IssueFieldSingleSelectValue{name field{...on IssueFieldSingleSelect{name}}}
+   }}
+   projectItems(first:100){pageInfo{hasNextPage} nodes{
+    fieldValueByName(name:"Status"){...on ProjectV2ItemFieldSingleSelectValue{name}}
    }}
   }}
  }
 }`
 
 type urgentNode struct {
-	Number           int
-	Title, State     string
-	Repository       struct{ NameWithOwner string }
+	Number       int
+	Title, State string
+	Repository   struct {
+		NameWithOwner string
+		IsArchived    bool
+	}
+	ProjectItems struct {
+		PageInfo struct{ HasNextPage bool }
+		Nodes    []struct{ FieldValueByName struct{ Name string } }
+	}
 	IssueFieldValues struct {
 		PageInfo struct{ HasNextPage bool }
 		Nodes    []struct {
@@ -36,11 +48,33 @@ type urgentNode struct {
 }
 
 func (n urgentNode) urgent() bool {
-	if n.State != "OPEN" {
+	if n.State != "OPEN" || n.Repository.IsArchived {
 		return false
 	}
+	for _, item := range n.ProjectItems.Nodes {
+		if excludedUrgentStatus(item.FieldValueByName.Name) {
+			return false
+		}
+	}
+	urgent := false
 	for _, v := range n.IssueFieldValues.Nodes {
+		if v.Field.Name == "Status" && excludedUrgentStatus(v.Name) {
+			return false
+		}
 		if v.Field.Name == "Priority" && v.Name == "Urgent" {
+			urgent = true
+		}
+	}
+	return urgent
+}
+
+func excludedUrgentStatus(status string) bool {
+	words := strings.FieldsFunc(strings.ToLower(status), func(r rune) bool { return !unicode.IsLetter(r) })
+	if len(words) == 2 && words[0] == "dev" && words[1] == "qa" {
+		return true
+	}
+	for _, word := range words {
+		if word == "blocked" {
 			return true
 		}
 	}
@@ -79,6 +113,9 @@ func fetchUrgent(ctx context.Context, search string) ([]dashboard.Row, map[strin
 			return nil, nil, fmt.Errorf("urgent query exceeds GitHub's 1000-result search limit; narrow the scope")
 		}
 		for _, n := range items.Nodes {
+			if n.ProjectItems.PageInfo.HasNextPage {
+				return nil, nil, fmt.Errorf("issue %d exceeds 100 projects; cannot verify blocked status", n.Number)
+			}
 			if n.IssueFieldValues.PageInfo.HasNextPage {
 				return nil, nil, fmt.Errorf("issue %d exceeds 100 native fields; cannot verify priority", n.Number)
 			}

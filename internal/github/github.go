@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BrianLeishman/blip/dashboard"
@@ -17,7 +18,9 @@ import (
 
 type Config struct {
 	UrgentQuery       string   `json:"urgent_query,omitempty"`
-	Repositories      []string `json:"repositories"`
+	Repositories      []string `json:"repositories,omitempty"`
+	Owners            []string `json:"owners,omitempty"`
+	IncludeDependabot bool     `json:"include_dependabot,omitempty"`
 	RequiredApprovals int      `json:"required_approvals"`
 }
 type Item struct {
@@ -25,6 +28,7 @@ type Item struct {
 	Title, URL, ReviewDecision, MergeStateStatus, UpdatedAt string
 	IsDraft                                                 bool
 	Author                                                  struct{ Login string }
+	Assignees                                               []struct{ Login string }
 	ReviewRequests                                          []json.RawMessage
 	Labels                                                  []struct{ Name string }
 	StatusCheckRollup                                       []Check
@@ -90,12 +94,17 @@ func ValidRepository(s string) bool {
 	return true
 }
 func Validate(c Config) error {
-	if len(c.Repositories) == 0 {
-		return fmt.Errorf("configure at least one repository")
+	if len(c.Repositories) == 0 && len(c.Owners) == 0 {
+		return fmt.Errorf("configure at least one repository or owner")
 	}
 	for _, repo := range c.Repositories {
 		if !ValidRepository(repo) {
 			return fmt.Errorf("invalid repository %q", repo)
+		}
+	}
+	for _, owner := range c.Owners {
+		if strings.Contains(owner, "/") || !ValidRepository(owner+"/repo") {
+			return fmt.Errorf("invalid owner %q", owner)
 		}
 	}
 	if c.RequiredApprovals < 1 {
@@ -104,63 +113,62 @@ func Validate(c Config) error {
 	return nil
 }
 func Fetch(ctx context.Context, c Config) (Result, error) {
-	result := Result{Snapshot: dashboard.Snapshot{Version: 1, Revision: strconv.FormatInt(time.Now().UnixNano(), 10), Status: "Updated " + time.Now().Format("15:04:05")}, URLs: map[string]string{}}
+	result := Result{Snapshot: dashboard.Snapshot{Version: 1, Revision: strconv.FormatInt(time.Now().UnixNano(), 10), Status: "GitHub connected"}, URLs: map[string]string{}}
 	if err := Validate(c); err != nil {
 		return result, err
 	}
+	var viewer struct{ Login string }
+	if err := gh(ctx, &viewer, "api", "user"); err != nil {
+		return result, err
+	}
+	if viewer.Login == "" {
+		return result, fmt.Errorf("GitHub returned an empty viewer login")
+	}
+	repositories, err := discoverRepositories(ctx, c)
+	if err != nil {
+		return result, err
+	}
 	updated := map[string]string{}
-	for _, repo := range c.Repositories {
-		for _, section := range []string{"ready", "review"} {
-			var items []Item
-			var args []string
-			args = []string{"pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", "number,title,url,isDraft,reviewDecision,mergeStateStatus,updatedAt,author,reviewRequests,labels,statusCheckRollup"}
-			if section == "ready" {
-				args = append(args, "--author", "@me")
-			} else {
-				args = append(args, "--search", "is:open -is:draft review-requested:@me sort:updated-asc")
+	// Fetch up to four repositories concurrently; collect in input order so
+	// network completion order never reshuffles the display.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	type repoResult struct {
+		result  Result
+		updated map[string]string
+		err     error
+	}
+	results := make([]repoResult, len(repositories))
+	slots := make(chan struct{}, 4)
+	var workers sync.WaitGroup
+	for i, repo := range repositories {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			select {
+			case slots <- struct{}{}:
+				defer func() { <-slots }()
+			case <-ctx.Done():
+				results[i].err = ctx.Err()
+				return
 			}
-
-			if err := gh(ctx, &items, args...); err != nil {
-				return result, fmt.Errorf("%s %s: %w", repo, section, err)
-			}
-			for _, item := range items {
-				if item.IsDraft {
-					continue
-				}
-				var pages [][]Review
-				if err := gh(ctx, &pages, "api", "--paginate", "--slurp", fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number)); err != nil {
-					return result, err
-				}
-				var reviews []Review
-				for _, page := range pages {
-					for _, r := range page {
-						if r.User.Login != item.Author.Login {
-							reviews = append(reviews, r)
-						}
-					}
-				}
-				n := Approvals(reviews)
-				rowSection := section
-				badge := fmt.Sprintf("%d/%d", n, c.RequiredApprovals)
-				detail := "Review requested from you"
-				if section == "review" {
-					if n >= c.RequiredApprovals {
-						continue
-					}
-				} else {
-					rowSection, badge, detail = OwnStatus(item, n, c.RequiredApprovals)
-				}
-				kind := "pull"
-
-				// Construct a known GitHub URL instead of accepting arbitrary serial URLs.
-				link := "https://github.com/" + repo + "/" + kind + "/" + strconv.Itoa(item.Number)
-				id := repo + "/" + kind + "/" + strconv.Itoa(item.Number)
-				result.Snapshot.Rows = append(result.Snapshot.Rows, dashboard.Row{ID: id, Section: rowSection, Title: item.Title, Badge: badge, Detail: detail})
-				result.URLs[id] = link
-				updated[id] = item.UpdatedAt
-			}
+			results[i].result, results[i].updated, results[i].err = fetchRepository(ctx, c, repo, viewer.Login)
+		}()
+	}
+	workers.Wait()
+	for _, r := range results {
+		if r.err != nil {
+			return result, r.err
+		}
+		result.Snapshot.Rows = append(result.Snapshot.Rows, r.result.Snapshot.Rows...)
+		for id, link := range r.result.URLs {
+			result.URLs[id] = link
+		}
+		for id, at := range r.updated {
+			updated[id] = at
 		}
 	}
+
 	if c.UrgentQuery != "" {
 		rows, urls, err := fetchUrgent(ctx, c.UrgentQuery)
 		if err != nil {
@@ -184,7 +192,7 @@ func Fetch(ctx context.Context, c Config) (Result, error) {
 	total := len(result.Snapshot.Rows)
 	if total > dashboard.MaxRows {
 		result.Snapshot.Rows = result.Snapshot.Rows[:dashboard.MaxRows]
-		result.Snapshot.Status = fmt.Sprintf("Showing %d of %d / %s", dashboard.MaxRows, total, time.Now().Format("15:04"))
+		result.Snapshot.Status = fmt.Sprintf("Showing %d of %d", dashboard.MaxRows, total)
 	}
 
 	return result, nil
@@ -192,4 +200,88 @@ func Fetch(ctx context.Context, c Config) (Result, error) {
 func SafeURL(raw string) bool {
 	u, err := url.Parse(raw)
 	return err == nil && u.Scheme == "https" && u.Host == "github.com" && u.User == nil
+}
+
+func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]string, error) {
+	result := Result{URLs: map[string]string{}}
+	updated := map[string]string{}
+	for _, section := range prSections(c) {
+		var items []Item
+		var args []string
+		args = []string{"pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", "number,title,url,isDraft,reviewDecision,mergeStateStatus,updatedAt,author,assignees,reviewRequests,labels,statusCheckRollup"}
+		if section == "ready" {
+			args = append(args, "--author", "@me")
+		} else if section == "dependabot" {
+			args = append(args, "--author", "dependabot[bot]")
+		} else {
+			args = append(args, "--search", "is:open -is:draft review-requested:@me sort:updated-asc")
+		}
+
+		if err := gh(ctx, &items, args...); err != nil {
+			return result, updated, fmt.Errorf("%s %s: %w", repo, section, err)
+		}
+		for _, item := range items {
+			id := repo + "/pull/" + strconv.Itoa(item.Number)
+			if _, exists := result.URLs[id]; exists {
+				continue
+			}
+			if item.IsDraft || !item.visibleTo(viewer) {
+				continue
+			}
+			var pages [][]Review
+			if err := gh(ctx, &pages, "api", "--paginate", "--slurp", fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number)); err != nil {
+				return result, updated, err
+			}
+			var reviews []Review
+			for _, page := range pages {
+				for _, r := range page {
+					if r.User.Login != item.Author.Login {
+						reviews = append(reviews, r)
+					}
+				}
+			}
+			n := Approvals(reviews)
+			rowSection := section
+			badge := fmt.Sprintf("%d/%d", n, c.RequiredApprovals)
+			detail := "Review requested from you"
+			if section == "review" {
+				if n >= c.RequiredApprovals {
+					continue
+				}
+				if Checks(item.StatusCheckRollup) == "!" {
+					badge += " FAIL"
+					detail = fmt.Sprintf("#%d CI:FAIL / Review requested from you", item.Number)
+				}
+				if item.MergeStateStatus == "DIRTY" {
+					badge = "CONFLICT"
+					detail = fmt.Sprintf("#%d %d/%d / merge conflict / CI:%s", item.Number, n, c.RequiredApprovals, Checks(item.StatusCheckRollup))
+				}
+			} else {
+				rowSection, badge, detail = OwnStatus(item, n, c.RequiredApprovals)
+			}
+			kind := "pull"
+
+			// Construct a known GitHub URL instead of accepting arbitrary serial URLs.
+			link := "https://github.com/" + repo + "/" + kind + "/" + strconv.Itoa(item.Number)
+			result.Snapshot.Rows = append(result.Snapshot.Rows, dashboard.Row{ID: id, Section: rowSection, Title: item.Title, Badge: badge, Detail: detail, ChecksRunning: ChecksRunning(item.StatusCheckRollup)})
+			result.URLs[id] = link
+			updated[id] = item.UpdatedAt
+		}
+	}
+	return result, updated, nil
+}
+
+// Dependabot work belongs on this dashboard only while unassigned or assigned
+// to the viewer. Apply this to review results too, so hidden PRs cannot reappear.
+func (item Item) visibleTo(viewer string) bool {
+	bot := strings.EqualFold(item.Author.Login, "app/dependabot") || strings.EqualFold(item.Author.Login, "dependabot[bot]")
+	if !bot || len(item.Assignees) == 0 {
+		return true
+	}
+	for _, assignee := range item.Assignees {
+		if strings.EqualFold(assignee.Login, viewer) {
+			return true
+		}
+	}
+	return false
 }

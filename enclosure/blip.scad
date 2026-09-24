@@ -1,7 +1,7 @@
 // blip: Brian's Little Information Panel
 // Original enclosure, MIT. Units: mm. See README for unverified fit parameters.
 // Print front face-down as generated; back flat as generated.
-part = "assembly"; // [assembly,front,back,fit]
+part = "assembly"; // [assembly,front,back,fit,encoder-fit]
 $fn = 48;
 width = 115;
 height = 76;
@@ -11,23 +11,34 @@ face = 2;
 corner_radius = 5;
 clearance = 0.3;
 // Adafruit V2 PCB in landscape: 64.770 x 52.578, holes 59.690 x 47.498.
-board_x = 8;
 board_y = 12;
 board_w = 64.770;
 board_h = 52.578;
 hole_inset = 2.540;
+post_radius = 3.2;
+post_inward = 2.0; // Relieve LCD-facing sides; retain 1.15 mm around M2 pilot.
 // Distance from front exterior to screen-facing PCB surface. Verify on assembly.
-board_z = 7.5;
+board_z = 7.5 - 0.1*25.4; // Physical fit correction: 2.54 mm closer to face.
 window_w = 50.5;
 window_h = 38.9;
-window_x = board_x + 34.20;
+window_x = 8 + 34.20; // Opening stays fixed; only the board mounts move.
 window_y = board_y + 26.34;
+// Mirror the original PCB mounting pattern about the fixed window center.
+board_x = 2*window_x - 8 - board_w;
 knob_x = 94;
 knob_y = 38;
 shaft_hole = 7.4;
-screw_hole = 2.8;
-nut_af = 5.2; // M2.5 nut across flats + printing allowance; measure nylon nuts.
-nut_depth = 2.2;
+// PEC11+SWITCH body footprint from Adafruit encoder PCB, rotated 45 degrees.
+// Short rails locate the body; shaft nut retains it axially. Verify actual fit.
+encoder_body_h = 13.2;
+encoder_gap = 0.3; // Per-side clearance.
+encoder_angle = 45;
+encoder_rail_length = 8;
+encoder_rail_wall = 1.8;
+encoder_rail_height = 3;
+board_screw_pilot = 1.7; // M2 board screws; tune after fit print.
+case_screw_pilot = 2.6; // M3 case screws form threads in plastic.
+case_screw_clearance = 3.3; // Lid: M3 screws pass freely into shell posts.
 back_thickness = 2.4;
 // Broad service opening accommodates the Feather USB plug without a panel extension.
 // Narrow/relocate after confirming the physical stack and cable boot.
@@ -46,7 +57,24 @@ module display_positions() {
  for(x=[hole_inset,board_w-hole_inset],y=[hole_inset,board_h-hole_inset])
   translate([board_x+x,board_y+y,0]) children();
 }
-module nut_pocket(z) {translate([0,0,z]) cylinder(h=nut_depth+0.1,d=nut_af/cos(30),$fn=6);}
+module display_posts() {
+ for(x=[hole_inset,board_w-hole_inset],y=[hole_inset,board_h-hole_inset])
+  translate([board_x+x,board_y+y,0]) intersection() {
+   cylinder(h=board_z,d=2*post_radius);
+   // Clip both inward-facing sides at each corner, preserving hole centers.
+   translate([x<board_w/2 ? -post_radius : -post_inward,
+              y<board_h/2 ? -post_radius : -post_inward,0])
+    cube([post_radius+post_inward,post_radius+post_inward,board_z]);
+  }
+}
+module encoder_index() {
+ translate([knob_x,knob_y,0]) rotate([0,0,encoder_angle])
+  for(side=[-1,1])
+   translate([-encoder_rail_length/2,
+    side>0 ? encoder_body_h/2+encoder_gap : -encoder_body_h/2-encoder_gap-encoder_rail_wall,
+    face-0.1])
+    cube([encoder_rail_length,encoder_rail_wall,encoder_rail_height+0.1]);
+}
 module front() {
  difference() {
   union() {
@@ -57,41 +85,40 @@ module front() {
       outline(width-2*wall,height-2*wall,corner_radius-wall);
    }
    // Display posts attach to the face; screws run in from the PCB side.
-   display_positions() cylinder(h=board_z,d=6.4);
+   display_posts();
+   encoder_index();
    screw_positions() cylinder(h=depth-back_thickness,d=8);
   }
   translate([window_x-window_w/2,window_y-window_h/2,-1])
    cube([window_w,window_h,face+2]);
   translate([knob_x,knob_y,-1]) cylinder(h=face+2,d=shaft_hole);
-  display_positions() {
-   translate([0,0,face]) cylinder(h=board_z+1,d=screw_hole);
-   nut_pocket(face);
-   // Side-loading captive nut pocket. Front remains intact.
-   translate([-3.3,-nut_af/2,face]) cube([6.6,nut_af,nut_depth]);
-  }
-  screw_positions() {
-   translate([0,0,face]) cylinder(h=depth,d=screw_hole);
-   nut_pocket(depth-back_thickness-5);
-   translate([-4.1,-nut_af/2,depth-back_thickness-5]) cube([8.2,nut_af,nut_depth]);
-  }
+  // Blind pilot holes leave the exterior face intact; no inserts or nuts.
+  display_positions()
+   translate([0,0,face]) cylinder(h=board_z+1,d=board_screw_pilot);
+  screw_positions()
+   translate([0,0,face]) cylinder(h=depth,d=case_screw_pilot);
   translate([usb_x,height-wall-1,usb_z]) cube([usb_width,wall+2,usb_height]);
  }
 }
 module back() {
  difference() {
   linear_extrude(back_thickness) outline(width,height,corner_radius);
-  screw_positions() translate([0,0,-1]) cylinder(h=back_thickness+2,d=screw_hole);
+  screw_positions() translate([0,0,-1]) cylinder(h=back_thickness+2,d=case_screw_clearance);
   // Small vent slots; the lid can be removed to reach BOOTSEL/RESET.
   for(x=[18:7:65]) translate([x,25,-1]) cube([2,20,back_thickness+2]);
  }
 }
 module fit() {
- // Cheap first print: bezel and mounting geometry only, no tall case walls.
- intersection() {front();translate([-1,-1,-1]) cube([width+2,height+2,board_z+1]);}
+ // Alignment and screw-fit test using the same pilot holes as the full shell.
+ intersection() {front();translate([-1,-1,-1]) cube([width+2,height+2,max(board_z,face+encoder_rail_height)+1]);}
 }
 if(part=="front") front();
 else if(part=="back") back();
 else if(part=="fit") fit();
+else if(part=="encoder-fit") intersection() {
+ front();
+ translate([knob_x-16,knob_y-16,0]) cube([32,32,face+encoder_rail_height]);
+}
 else {
  color("#343c48") front();
  color("#687885") translate([0,0,depth+8]) back();

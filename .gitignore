@@ -2,3 +2,7 @@
 /blip.local.json
 *.log
 .DS_Store
+.env
+.env.*
+*.local.json
+/docs/images/originals/

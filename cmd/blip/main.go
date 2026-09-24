@@ -169,7 +169,7 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 	}
 	current := ghdata.Result{URLs: map[string]string{}}
 	var wire []byte
-	var lastSend, lastFetch, lastOpen time.Time
+	var lastSend, lastFetch time.Time
 	send := func() error {
 		if len(wire) == 0 {
 			return nil
@@ -240,6 +240,10 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 						return err
 					}
 				}
+			case "touch-error":
+				log.Printf("Touchscreen: %s", e.Error)
+			case "touch-scroll":
+				log.Printf("Touch scroll: row %d", e.Position)
 			case "ack":
 				log.Printf("Device acknowledged snapshot %s", e.Revision)
 			case "turn", "click":
@@ -247,11 +251,9 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 					log.Printf("%s position=%d", e.Kind, e.Position)
 				}
 			case "open":
-				if e.Revision != current.Snapshot.Revision || time.Since(lastFetch) > 90*time.Second || time.Since(lastOpen) < 500*time.Millisecond {
-					continue
-				}
-				link, ok := current.URLs[e.ID]
-				if !ok || !ghdata.SafeURL(link) {
+				link, ok := openTarget(e)
+				if !ok {
+					log.Printf("Ignored open %s: malformed item ID", e.ID)
 					continue
 				}
 				command := "open"
@@ -261,10 +263,30 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 				if err = exec.CommandContext(ctx, command, link).Run(); err != nil {
 					log.Printf("Open browser: %v", err)
 				} else {
-					lastOpen = time.Now()
 					log.Printf("Opened %s", e.ID)
 				}
 			}
 		}
 	}
+}
+
+// The device carries an item ID, not an arbitrary URL. Build the fixed-host
+// GitHub URL locally without consulting refresh state or snapshot revisions.
+func openTarget(e dashboard.Event) (string, bool) {
+	parts := strings.Split(e.ID, "/")
+	if len(parts) != 4 || !ghdata.ValidRepository(parts[0]+"/"+parts[1]) {
+		return "", false
+	}
+	if parts[2] != "pull" && parts[2] != "issues" {
+		return "", false
+	}
+	if len(parts[3]) == 0 || parts[3][0] < '1' || parts[3][0] > '9' {
+		return "", false
+	}
+	for _, digit := range parts[3] {
+		if digit < '0' || digit > '9' {
+			return "", false
+		}
+	}
+	return "https://github.com/" + e.ID, true
 }

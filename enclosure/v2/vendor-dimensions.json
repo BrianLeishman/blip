@@ -1,0 +1,187 @@
+{
+  "screen": {
+    "source": "https://github.com/adafruit/Adafruit-2.4-TFT-FeatherWing-PCB",
+    "file": "Adafruit 2.4in TFT FeatherWing V2.brd",
+    "size_xy": [
+      52.578,
+      64.77
+    ],
+    "holes": [
+      [
+        2.54,
+        2.54,
+        2.5
+      ],
+      [
+        50.038,
+        2.54,
+        2.5
+      ],
+      [
+        2.54,
+        62.23,
+        2.5
+      ],
+      [
+        50.038,
+        62.23,
+        2.5
+      ]
+    ],
+    "connectors": [
+      {
+        "name": "U$10",
+        "package": "TFT_2.4IN_240X320_50PIN",
+        "xy": [
+          26.289,
+          30.734
+        ],
+        "rotation": "MR180"
+      },
+      {
+        "name": "MS2",
+        "package": "FEATHERWING_SMT2",
+        "xy": [
+          0.0,
+          37.719
+        ],
+        "rotation": "R0"
+      },
+      {
+        "name": "CONN1",
+        "package": "JST_SH4",
+        "xy": [
+          49.53,
+          49.149
+        ],
+        "rotation": "R90"
+      }
+    ]
+  },
+  "feather": {
+    "source": "https://github.com/adafruit/Adafruit-Feather-RP2040-PCB",
+    "file": "Adafruit Feather RP2040.brd",
+    "size_xy": [
+      50.8,
+      22.86
+    ],
+    "holes": [
+      [
+        2.54,
+        20.32,
+        2.5
+      ],
+      [
+        2.54,
+        2.54,
+        2.5
+      ]
+    ],
+    "connectors": [
+      {
+        "name": "JP1",
+        "package": "1X16_ROUND",
+        "xy": [
+          25.4,
+          1.27
+        ],
+        "rotation": "R180"
+      },
+      {
+        "name": "X1",
+        "package": "JSTPH2_BATT",
+        "xy": [
+          10.922,
+          17.653
+        ],
+        "rotation": "R0"
+      },
+      {
+        "name": "JP3",
+        "package": "1X12_ROUND",
+        "xy": [
+          30.48,
+          21.6535
+        ],
+        "rotation": "R0"
+      },
+      {
+        "name": "X6",
+        "package": "USB_C_CUSB31-CFM2AX-01-X",
+        "xy": [
+          3.8735,
+          11.43
+        ],
+        "rotation": "R270"
+      },
+      {
+        "name": "CONN1",
+        "package": "JST_SH4",
+        "xy": [
+          47.752,
+          8.255
+        ],
+        "rotation": "R90"
+      }
+    ]
+  },
+  "encoder": {
+    "source": "https://github.com/adafruit/Adafruit-I2C-QT-Rotary-Encoder-PCB",
+    "file": "Adafruit I2C QT Rotary Encoder.brd",
+    "size_xy": [
+      25.4,
+      25.4
+    ],
+    "holes": [
+      [
+        2.54,
+        22.86,
+        2.5
+      ],
+      [
+        22.86,
+        22.86,
+        2.5
+      ],
+      [
+        2.54,
+        2.54,
+        2.5
+      ],
+      [
+        22.86,
+        2.54,
+        2.5
+      ]
+    ],
+    "connectors": [
+      {
+        "name": "SW1",
+        "package": "PEC11+SWITCH",
+        "xy": [
+          12.7,
+          12.7
+        ],
+        "rotation": "MR135"
+      },
+      {
+        "name": "CONN3",
+        "package": "JST_SH4",
+        "xy": [
+          22.86,
+          12.7
+        ],
+        "rotation": "R90"
+      },
+      {
+        "name": "CONN4",
+        "package": "JST_SH4",
+        "xy": [
+          2.54,
+          12.7
+        ],
+        "rotation": "R270"
+      }
+    ]
+  }
+}

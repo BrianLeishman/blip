@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"machine"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/BrianLeishman/blip/dashboard"
@@ -26,10 +27,14 @@ var amber = color.RGBA{255, 193, 90, 255}
 var red = color.RGBA{255, 110, 120, 255}
 var snapshot = dashboard.Snapshot{Version: 1, Status: "Waiting for Mac companion"}
 var selected int
+var scrollTop int
+var marquee dashboard.Marquee
 var lastUpdate time.Time
 var testPosition int32
 var clicks int
 var encoderError string
+var spinnerFrame int
+var highlight = color.RGBA{28, 85, 150, 255}
 
 func emit(e dashboard.Event) {
 	b, err := json.Marshal(e)
@@ -41,6 +46,9 @@ func label(x, y int16, s string, c color.RGBA) {
 	tinyfont.WriteLine(screen, &proggy.TinySZ8pt7b, x, y, s, c)
 }
 func ascii(s string, max int) string {
+	// Abbreviate display text before truncation; IDs and links stay untouched.
+	s = strings.ReplaceAll(s, "StirlingMarketingGroup", "SMG")
+	s = strings.ReplaceAll(s, "BrianLeishman", "BL")
 	b := make([]byte, 0, max)
 	for _, r := range s {
 		if len(b) >= max {
@@ -58,6 +66,12 @@ func ascii(s string, max int) string {
 	return string(b)
 }
 func draw() {
+	if selected >= 0 && selected < len(snapshot.Rows) {
+		r := snapshot.Rows[selected]
+		marquee.Set(r.ID, ascii(r.Title, len(r.Title)), time.Now())
+	} else {
+		marquee.Set("", "", time.Now())
+	}
 	screen.FillScreen(bg)
 	label(10, 17, "blip", green)
 	label(48, 17, "Brian's Little Information Panel", muted)
@@ -92,12 +106,9 @@ func draw() {
 			label(12, 90, "All clear. Nothing needs attention.", green)
 		}
 	} else {
-		// One continuous list, nine visible rows; selection scrolls the viewport.
-		start := 0
-		if selected >= 9 {
-			start = selected - 8
-		}
-		for i := start; i < len(snapshot.Rows) && i < start+9; i++ {
+		// One continuous list, ten visible rows; selection scrolls the viewport.
+		start := scrollTop
+		for i := start; i < len(snapshot.Rows) && i < start+dashboard.VisibleRows; i++ {
 			r := snapshot.Rows[i]
 			y := int16(61 + (i-start)*17)
 			c := green
@@ -115,24 +126,77 @@ func draw() {
 				marker = "!"
 			}
 			if i == selected {
-				screen.FillRectangle(6, y-11, 308, 16, color.RGBA{35, 49, 65, 255})
+				screen.FillRectangle(6, y-11, 308, 16, highlight)
+				screen.FillRectangle(6, y-11, 3, 16, white)
 			}
 			label(10, y, marker, c)
-			label(24, y, ascii(r.Title, 39), white)
+			title := ascii(r.Title, dashboard.TitleColumns)
+			if i == selected {
+				title = marquee.Text()
+			}
+			label(24, y, title, white)
+			if strings.HasSuffix(r.Badge, "FAIL") || r.Badge == "CONFLICT" {
+				c = red
+			}
 			label(263, y, ascii(r.Badge, 8), c)
 		}
 	}
-	screen.FillRectangle(8, 214, 304, 1, muted)
+	screen.FillRectangle(8, 224, 304, 1, muted)
 	status := snapshot.Status
-	if selected < len(snapshot.Rows) && snapshot.Rows[selected].Detail != "" {
-		status = snapshot.Rows[selected].Detail
+	identity := ""
+	if selected >= 0 && selected < len(snapshot.Rows) {
+		r := snapshot.Rows[selected]
+		identity = r.Identity()
+		status = r.Detail
+		// Details from the companion may repeat the leading #number.
+		number, _, _ := strings.Cut(identity, " ")
+		status = strings.TrimPrefix(status, number+" ")
+		status = strings.NewReplacer(
+			"Review requested from you", "Your review",
+			"changes requested", "changes needed",
+			"merge conflict", "CONFLICT",
+			"no requests", "no req",
+			" requested", " req",
+			" / ", " ",
+		).Replace(status)
 	}
 	if encoderError != "" {
 		status = "Encoder: " + encoderError
 	} else if !lastUpdate.IsZero() && time.Since(lastUpdate) > 90*time.Second {
-		status = "OFFLINE / last data may be stale"
+		status = "STALE DATA"
 	}
-	label(10, 230, ascii(status, 50), muted)
+	footer := ascii(status, 50)
+	if identity != "" {
+		// Reserve space for status; shorten the repo before hiding CI/conflicts.
+		status = ascii(status, 34)
+		footer = ascii(identity, 50)
+		if status != "" {
+			footer = ascii(identity, 49-len(status)) + " " + status
+		}
+	}
+	label(10, 237, footer, muted)
+	drawSpinners()
+}
+
+// Animate only the small reserved CI column, preserving the rest of the screen.
+func drawSpinners() {
+	start := scrollTop
+	for i := start; i < len(snapshot.Rows) && i < start+dashboard.VisibleRows; i++ {
+		if !snapshot.Rows[i].ChecksRunning {
+			continue
+		}
+		y := int16(61 + (i-start)*17)
+		background := bg
+		if i == selected {
+			background = highlight
+		}
+		screen.FillRectangle(250, y-11, 10, 14, background)
+		glyph, ink := string("|/-\\"[spinnerFrame%4]), amber
+		if time.Since(lastUpdate) > 90*time.Second {
+			glyph, ink = "-", muted
+		}
+		label(251, y, glyph, ink)
+	}
 }
 
 func initEncoder() (*seesaw.Device, error) {
@@ -159,7 +223,7 @@ func main() {
 	machine.D5.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	machine.D5.High()
 	screen = ili9341.NewSPI(machine.SPI0, machine.D10, machine.D9, machine.NoPin)
-	screen.Configure(ili9341.Config{Rotation: ili9341.Rotation90})
+	screen.Configure(ili9341.Config{Rotation: ili9341.Rotation270})
 	draw()
 	encoder, err := initEncoder()
 	if err != nil {
@@ -173,9 +237,13 @@ func main() {
 	if err == nil {
 		prevPosition, _ = encoder.GetEncoderPosition(0, false)
 	}
+	lastTouch := time.Now()
+	var swipe dashboard.Swipe
+	touchFailed := false
 	lastPoll := time.Now()
 	lastHello := time.Time{}
-	lastDraw := time.Now()
+	offlineShown := false
+	lastSpinner := time.Now()
 	lastRetry := time.Now()
 	var rawPressed, stablePressed bool
 	changed := time.Now()
@@ -189,14 +257,23 @@ func main() {
 				if !discard && n > 0 {
 					var next dashboard.Snapshot
 					if json.Unmarshal(line[:n], &next) == nil && next.Version == 1 && len(next.Rows) <= dashboard.MaxRows {
+						needsDraw := snapshot.Revision == "" || !snapshot.SameContent(next) || offlineShown || (!lastUpdate.IsZero() && time.Since(lastUpdate) > 90*time.Second)
 						id := ""
-						if selected < len(snapshot.Rows) {
+						if selected >= 0 && selected < len(snapshot.Rows) {
 							id = snapshot.Rows[selected].ID
 						}
 						snapshot = next
-						selected = dashboard.Selected(snapshot.Rows, id)
+						if selected >= 0 {
+							selected = dashboard.Selected(snapshot.Rows, id)
+							scrollTop = dashboard.ScrollTop(scrollTop, selected, len(snapshot.Rows))
+						} else {
+							scrollTop = dashboard.ClampTop(scrollTop, len(snapshot.Rows))
+						}
 						lastUpdate = time.Now()
-						draw()
+						offlineShown = false
+						if needsDraw {
+							draw()
+						}
 						emit(dashboard.Event{Kind: "ack", Revision: snapshot.Revision})
 					}
 				}
@@ -223,6 +300,31 @@ func main() {
 				draw()
 			}
 		}
+		if now.Sub(lastTouch) >= 40*time.Millisecond {
+			lastTouch = now
+			y, pressed, touchErr := touchY()
+			if touchErr != nil {
+				if !touchFailed {
+					emit(dashboard.Event{Kind: "touch-error", Error: touchErr.Error()})
+				}
+				touchFailed = true
+				swipe.Move(0, false)
+			} else {
+				touchFailed = false
+				if delta := swipe.Move(y, pressed); delta != 0 && len(snapshot.Rows) > 0 {
+					next := dashboard.ClampTop(scrollTop+delta, len(snapshot.Rows))
+					if next != scrollTop {
+						if selected >= 0 {
+							selected += next - scrollTop
+						}
+						scrollTop = next
+						emit(dashboard.Event{Kind: "touch-scroll", Position: int32(scrollTop)})
+						draw()
+					}
+				}
+			}
+		}
+
 		if encoderError == "" && now.Sub(lastPoll) >= 10*time.Millisecond {
 			lastPoll = now
 			pos, e := encoder.GetEncoderPosition(0, false)
@@ -234,18 +336,14 @@ func main() {
 				continue
 			}
 			if pos != prevPosition {
-				delta := pos - prevPosition
+				// This encoder counts down clockwise; clockwise advances the list.
+				delta := prevPosition - pos
 				prevPosition = pos
 				testPosition = pos
 				if len(snapshot.Rows) > 0 {
-					selected += int(delta)
-					if selected < 0 {
-						selected = 0
-					}
-					if selected >= len(snapshot.Rows) {
-						selected = len(snapshot.Rows) - 1
-					}
+					selected = dashboard.MoveSelection(selected, int(delta), len(snapshot.Rows))
 				}
+				scrollTop = dashboard.ScrollTop(scrollTop, selected, len(snapshot.Rows))
 				emit(dashboard.Event{Kind: "turn", Position: pos})
 				draw()
 			}
@@ -258,7 +356,7 @@ func main() {
 				stablePressed = pressed
 				if pressed {
 					clicks++
-					if len(snapshot.Rows) > 0 && time.Since(lastUpdate) < 90*time.Second {
+					if selected >= 0 && selected < len(snapshot.Rows) {
 						emit(dashboard.Event{Kind: "open", Revision: snapshot.Revision, ID: snapshot.Rows[selected].ID})
 					} else {
 						emit(dashboard.Event{Kind: "click"})
@@ -267,11 +365,20 @@ func main() {
 				}
 			}
 		}
-		if now.Sub(lastDraw) > time.Second {
-			if !lastUpdate.IsZero() && now.Sub(lastUpdate) > 90*time.Second {
-				draw()
-			}
-			lastDraw = now
+		if !offlineShown && !lastUpdate.IsZero() && now.Sub(lastUpdate) > 90*time.Second {
+			draw()
+			offlineShown = true
+		}
+		if now.Sub(lastSpinner) >= 250*time.Millisecond && !lastUpdate.IsZero() && now.Sub(lastUpdate) <= 90*time.Second {
+			spinnerFrame = (spinnerFrame + 1) % 4
+			drawSpinners()
+			lastSpinner = now
+		}
+		if selected >= scrollTop && selected < len(snapshot.Rows) && selected < scrollTop+dashboard.VisibleRows && marquee.Advance(now) {
+			y := int16(61 + (selected-scrollTop)*17)
+			// Redraw only the title; preserve highlight bar, badge and CI spinner.
+			screen.FillRectangle(24, y-11, dashboard.TitleColumns*6, 16, highlight)
+			label(24, y, marquee.Text(), white)
 		}
 		time.Sleep(time.Millisecond)
 	}
