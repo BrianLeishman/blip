@@ -22,8 +22,8 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
 - **Urgent:** optional GitHub issue Priority filtering, excluding blocked work.
 - **Across repositories:** discover relevant PRs across configured organizations
   and personal accounts; skip archived repositories.
-- **Dependabot included:** optionally treat its PRs as yours, hiding those
-  assigned exclusively to somebody else.
+- **Extra authors:** optionally treat Dependabot and configured GitHub accounts
+  as yours, hiding their PRs assigned exclusively to somebody else.
 
 Running checks get a spinner. Long selected titles marquee. Turn past either end
 of the list to clear the selection and stop the scrolling title. The footer shows

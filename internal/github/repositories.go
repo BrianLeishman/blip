@@ -22,12 +22,11 @@ func discoverRepositories(ctx context.Context, c Config) ([]string, error) {
 		}
 	}
 	if len(c.Owners) > 0 {
-		for _, section := range prSections(c) {
-			filter, author := "--author", "@me"
-			if section == "review" {
+		for _, query := range prQueries(c) {
+			filter, author := "--author", query.author
+			if query.section == "review" {
 				filter = "--review-requested"
-			} else if section == "dependabot" {
-				author = "dependabot[bot]"
+				author = "@me"
 			}
 			args := []string{"search", "prs", "--state", "open", "--draft=false", "--archived=false", filter, author, "--limit", "1000", "--json", "repository"}
 			for _, owner := range c.Owners {
@@ -59,10 +58,25 @@ func discoverRepositories(ctx context.Context, c Config) ([]string, error) {
 	return result, nil
 }
 
-// Process owned PRs before review requests so overlapping results appear once.
-func prSections(c Config) []string {
+type prQuery struct {
+	section string
+	author  string
+}
+
+// Use the same author searches for discovery and fetching. Fetch owned PRs first
+// so review requests for those PRs cannot produce duplicate or misclassified rows.
+func prQueries(c Config) []prQuery {
+	queries := []prQuery{{section: "ready", author: "@me"}}
 	if c.IncludeDependabot {
-		return []string{"ready", "dependabot", "review"}
+		queries = append(queries, prQuery{section: "ready", author: "dependabot[bot]"})
 	}
-	return []string{"ready", "review"}
+	seen := map[string]bool{"@me": true}
+	for _, author := range c.AdditionalAuthors {
+		key := strings.ToLower(author)
+		if !seen[key] {
+			queries = append(queries, prQuery{section: "ready", author: author})
+			seen[key] = true
+		}
+	}
+	return append(queries, prQuery{section: "review"})
 }

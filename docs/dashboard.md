@@ -20,6 +20,12 @@ using the same Mine/Merge, approval, conflict, and CI rules. PRs that also reque
 your review appear once in Mine/Merge. Dependabot PRs assigned solely to other
 people are hidden (including from Review); unassigned PRs and PRs assigned to
 you remain visible.
+Set `additional_authors` to a list such as `["your-other-account"]` to treat
+those accounts' PRs the same way, including the assignment filter above. This
+works independently of `include_dependabot`, within your configured owners and
+repositories. Repositories containing only these authors' PRs are discovered too.
+Overlapping author and review results appear once; your own account's PRs remain
+visible regardless of assignee.
 Urgent issues are disabled in the example configuration. They use their own
 `urgent_query` scope; use `(org:YOUR_ORG OR user:YOUR_NAME)` for both owners.
 

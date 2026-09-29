@@ -208,8 +208,8 @@ func TestMergeConflictBlocksReady(t *testing.T) {
 	}
 }
 
-func TestDependabotAssignments(t *testing.T) {
-	for _, author := range []string{"app/dependabot", "dependabot[bot]", "human"} {
+func TestSharedAuthorAssignments(t *testing.T) {
+	for _, author := range []string{"app/dependabot", "dependabot[bot]", "EXTRAUSER", "human", "BrianLeishman"} {
 		for _, tc := range []struct {
 			assignees string
 			want      bool
@@ -223,8 +223,8 @@ func TestDependabotAssignments(t *testing.T) {
 			if err := json.Unmarshal([]byte(`{"author":{"login":"`+author+`"},"assignees":`+tc.assignees+`}`), &item); err != nil {
 				t.Fatal(err)
 			}
-			want := tc.want || author == "human"
-			if item.visibleTo("BrianLeishman") != want {
+			want := tc.want || author == "human" || author == "BrianLeishman"
+			if item.visibleTo("BrianLeishman", Config{AdditionalAuthors: []string{"ExtraUser", "BrianLeishman"}}) != want {
 				t.Fatalf("%s assigned %s: want visible %t", author, tc.assignees, want)
 			}
 		}

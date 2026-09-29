@@ -21,6 +21,7 @@ type Config struct {
 	Repositories      []string `json:"repositories,omitempty"`
 	Owners            []string `json:"owners,omitempty"`
 	IncludeDependabot bool     `json:"include_dependabot,omitempty"`
+	AdditionalAuthors []string `json:"additional_authors,omitempty"`
 	RequiredApprovals int      `json:"required_approvals"`
 }
 type Item struct {
@@ -105,6 +106,11 @@ func Validate(c Config) error {
 	for _, owner := range c.Owners {
 		if strings.Contains(owner, "/") || !ValidRepository(owner+"/repo") {
 			return fmt.Errorf("invalid owner %q", owner)
+		}
+	}
+	for _, author := range c.AdditionalAuthors {
+		if strings.HasPrefix(author, "-") || strings.Contains(author, "/") || !ValidRepository(author+"/repo") {
+			return fmt.Errorf("invalid additional author %q", author)
 		}
 	}
 	if c.RequiredApprovals < 1 {
@@ -205,27 +211,25 @@ func SafeURL(raw string) bool {
 func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]string, error) {
 	result := Result{URLs: map[string]string{}}
 	updated := map[string]string{}
-	for _, section := range prSections(c) {
+	for _, query := range prQueries(c) {
 		var items []Item
 		var args []string
 		args = []string{"pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", "number,title,url,isDraft,reviewDecision,mergeStateStatus,updatedAt,author,assignees,reviewRequests,labels,statusCheckRollup"}
-		if section == "ready" {
-			args = append(args, "--author", "@me")
-		} else if section == "dependabot" {
-			args = append(args, "--author", "dependabot[bot]")
+		if query.author != "" {
+			args = append(args, "--author", query.author)
 		} else {
 			args = append(args, "--search", "is:open -is:draft review-requested:@me sort:updated-asc")
 		}
 
 		if err := gh(ctx, &items, args...); err != nil {
-			return result, updated, fmt.Errorf("%s %s: %w", repo, section, err)
+			return result, updated, fmt.Errorf("%s %s author=%q: %w", repo, query.section, query.author, err)
 		}
 		for _, item := range items {
 			id := repo + "/pull/" + strconv.Itoa(item.Number)
 			if _, exists := result.URLs[id]; exists {
 				continue
 			}
-			if item.IsDraft || !item.visibleTo(viewer) {
+			if item.IsDraft || !item.visibleTo(viewer, c) {
 				continue
 			}
 			var pages [][]Review
@@ -241,10 +245,10 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 				}
 			}
 			n := Approvals(reviews)
-			rowSection := section
+			rowSection := query.section
 			badge := fmt.Sprintf("%d/%d", n, c.RequiredApprovals)
 			detail := "Review requested from you"
-			if section == "review" {
+			if query.section == "review" {
 				if n >= c.RequiredApprovals {
 					continue
 				}
@@ -271,11 +275,14 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 	return result, updated, nil
 }
 
-// Dependabot work belongs on this dashboard only while unassigned or assigned
+// Dependabot and additional-author work belongs here only while unassigned or assigned
 // to the viewer. Apply this to review results too, so hidden PRs cannot reappear.
-func (item Item) visibleTo(viewer string) bool {
-	bot := strings.EqualFold(item.Author.Login, "app/dependabot") || strings.EqualFold(item.Author.Login, "dependabot[bot]")
-	if !bot || len(item.Assignees) == 0 {
+func (item Item) visibleTo(viewer string, c Config) bool {
+	sharedAuthor := strings.EqualFold(item.Author.Login, "app/dependabot") || strings.EqualFold(item.Author.Login, "dependabot[bot]")
+	for _, author := range c.AdditionalAuthors {
+		sharedAuthor = sharedAuthor || strings.EqualFold(item.Author.Login, author)
+	}
+	if strings.EqualFold(item.Author.Login, viewer) || !sharedAuthor || len(item.Assignees) == 0 {
 		return true
 	}
 	for _, assignee := range item.Assignees {
