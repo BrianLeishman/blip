@@ -50,6 +50,11 @@ Urgent issues are disabled in the example configuration. They use their own
   LGTM-label workflow does not itself count as the LGTM label.
 - **R / Review:** `is:open -is:draft review-requested:@me`, sorted by **least
   recently updated**, with fewer than the configured number of approvals.
+  PRs with queued/running checks or failed checks (including cancelled, timed-out,
+  or action-required runs) are hidden until those checks clear. PRs with no checks
+  remain eligible, as do successful, skipped, or neutral checks. This filter applies
+  only to Review; your own, Dependabot, and additional-author PRs keep their CI status
+  visible in Mine/Merge.
   All review pages are fetched; duplicate approvals from one person count once.
   Bots and the author are excluded. Comments do not revoke an approval; a later
   changes-requested or dismissed review does. GitHub remains authoritative about

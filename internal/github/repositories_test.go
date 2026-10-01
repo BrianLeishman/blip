@@ -1,6 +1,7 @@
 package github
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -143,5 +144,72 @@ func TestAdditionalAuthorConfiguration(t *testing.T) {
 	}
 	if !reflect.DeepEqual(prQueries(c), []prQuery{{"ready", "@me"}, {"ready", "ExtraUser"}, {"review", ""}}) {
 		t.Fatal("extra authors must work with Dependabot disabled")
+	}
+}
+
+func TestReviewQueueHidesUnreadyCIWithoutHidingOwnedPRs(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		checks  []Check
+		visible bool
+	}{
+		{"no checks", nil, true},
+		{"success", []Check{{Status: "COMPLETED", Conclusion: "SUCCESS"}}, true},
+		{"skipped and neutral", []Check{{Status: "COMPLETED", Conclusion: "SKIPPED"}, {Status: "COMPLETED", Conclusion: "NEUTRAL"}}, true},
+		{"legacy success", []Check{{State: "SUCCESS"}}, true},
+		{"queued", []Check{{Status: "QUEUED"}}, false},
+		{"running", []Check{{Status: "IN_PROGRESS"}}, false},
+		{"waiting", []Check{{Status: "WAITING"}}, false},
+		{"legacy pending", []Check{{State: "PENDING"}}, false},
+		{"failure", []Check{{Status: "COMPLETED", Conclusion: "FAILURE"}}, false},
+		{"cancelled", []Check{{Status: "COMPLETED", Conclusion: "CANCELLED"}}, false},
+		{"timed out", []Check{{Status: "COMPLETED", Conclusion: "TIMED_OUT"}}, false},
+		{"action required", []Check{{Status: "COMPLETED", Conclusion: "ACTION_REQUIRED"}}, false},
+		{"legacy error", []Check{{State: "ERROR"}}, false},
+		{"success and running", []Check{{State: "SUCCESS"}, {Status: "IN_PROGRESS"}}, false},
+		{"failure and running", []Check{{Conclusion: "FAILURE", Status: "COMPLETED"}, {Status: "IN_PROGRESS"}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			script := `#!/bin/sh
+case "$*" in
+ "pr list "*"--author @me") echo "$OWN_PR" ;;
+ "pr list "*"--author dependabot[bot]") echo "$BOT_PR" ;;
+ "pr list "*"--author ExtraUser") echo "$EXTRA_PR" ;;
+ "pr list "*) echo "$REVIEW_PR" ;;
+ "api "*) echo '[[]]' ;;
+ *) exit 1 ;;
+esac
+`
+			if err := os.WriteFile(filepath.Join(dir, "gh"), []byte(script), 0755); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("PATH", dir)
+			for i, name := range []string{"OWN_PR", "BOT_PR", "EXTRA_PR", "REVIEW_PR"} {
+				b, err := json.Marshal([]Item{{Number: i + 1, Title: "Example PR", StatusCheckRollup: tc.checks}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Setenv(name, string(b))
+			}
+			result, _, err := fetchRepository(t.Context(), Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}, RequiredApprovals: 2}, "Org/example", "Viewer")
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []string{"Org/example/pull/1", "Org/example/pull/2", "Org/example/pull/3"}
+			if tc.visible {
+				want = append(want, "Org/example/pull/4")
+			}
+			var got []string
+			for _, row := range result.Snapshot.Rows {
+				got = append(got, row.ID)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("got %v, want %v", got, want)
+			}
+			if (result.URLs["Org/example/pull/4"] != "") != tc.visible {
+				t.Fatal("review URL visibility differs from row visibility")
+			}
+		})
 	}
 }

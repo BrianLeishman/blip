@@ -18,7 +18,8 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
   a spinner and can still appear here.
 - **Mine:** your other PRs, with approval counts, LGTM labels, and CI status.
 - **Review:** open, non-draft PRs requesting your review, oldest updated first,
-  while they still have fewer than the configured number of approvals.
+  while they still have fewer than the configured number of approvals. PRs with
+  running or failing CI stay hidden until their checks clear.
 - **Urgent:** optional GitHub issue Priority filtering, excluding blocked work.
 - **Across repositories:** discover relevant PRs across configured organizations
   and personal accounts; skip archived repositories.

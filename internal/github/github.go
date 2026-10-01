@@ -232,6 +232,12 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 			if item.IsDraft || !item.visibleTo(viewer, c) {
 				continue
 			}
+			if query.section == "review" {
+				switch Checks(item.StatusCheckRollup) {
+				case "!", "~":
+					continue
+				}
+			}
 			var pages [][]Review
 			if err := gh(ctx, &pages, "api", "--paginate", "--slurp", fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number)); err != nil {
 				return result, updated, err
@@ -251,10 +257,6 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 			if query.section == "review" {
 				if n >= c.RequiredApprovals {
 					continue
-				}
-				if Checks(item.StatusCheckRollup) == "!" {
-					badge += " FAIL"
-					detail = fmt.Sprintf("#%d CI:FAIL / Review requested from you", item.Number)
 				}
 				if item.MergeStateStatus == "DIRTY" {
 					badge = "CONFLICT"
