@@ -22,7 +22,9 @@ open events from it without checking whether the item exists in the newest
 snapshot, so clicks continue to work on stale data and after a restart.
 
 Those events contain item IDs, not arbitrary URLs. The companion validates an
-`owner/repo/pull/positive-number` or `owner/repo/issues/positive-number` path,
+`owner/repo/pull/positive-number`, `owner/repo/issues/positive-number`, or
+`owner/repo/actions/runs/positive-number` path. Issue/PR paths can additionally
+carry one of the supported comment anchors with a positive numeric comment ID. It
 constructs an HTTPS URL on the fixed `github.com` host, and invokes the browser
 opener directly without a shell. This prevents the device from supplying a shell
 command or another URL scheme/host; it does not authenticate the device or stop a
@@ -44,6 +46,12 @@ The README photo uses fictional LCD content and blank background screens.
 logs, build output, and the reserved originals-image folder. Ignore rules do not
 protect files that are already tracked, and cannot recognize every secret.
 Only copy sanitized assets into `docs/images/`.
+
+Comment acknowledgment files are ignored `*.alerts.local.json` files beside the
+configuration. They contain repository paths and comment IDs, without comment
+bodies or tokens. Delete the file to reset local acknowledgments. GitHub inbox read
+status remains separate. Deployment workflow names in local config and live LCD
+output may identify private services or brands; keep those local too.
 
 ## Before publishing changes
 

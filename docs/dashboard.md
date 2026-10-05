@@ -29,6 +29,58 @@ visible regardless of assignee.
 Urgent issues are disabled in the example configuration. They use their own
 `urgent_query` scope; use `(org:YOUR_ORG OR user:YOUR_NAME)` for both owners.
 
+Two optional alert types appear first in the same continuous list: failed
+deployments, then comments. They do not add pages or change the knob controls.
+
+```json
+{
+  "comments_since": "2026-10-05T00:00:00Z",
+  "deployments": [
+    {"repository": "your-org/service", "workflow": "deploy.yml", "branch": "main"}
+  ]
+}
+```
+
+`comments_since` is a fixed initial cutoff, not a moving daily window. Set an
+RFC3339 timestamp to enable comments; leave it empty to disable them. Local midnight
+may require a UTC offset, for example `2026-10-05T00:00:00-04:00`.
+`deployments` is an explicit allowlist of workflow filenames or IDs and production
+branches within your configured repository/owner scope. No guessing from workflow
+names, and no blanket list of failed Actions runs. Archived repositories are skipped.
+
+- **C / Comments:** one row per unread notification thread, opening its latest
+  human issue comment, PR conversation comment, inline review comment, or review
+  containing text. Comments must be newer than both the initial cutoff and the
+  thread's GitHub read timestamp. Bots, your own comments, empty review votes,
+  CI notifications, and state changes without a new human comment are excluded.
+  Threads can be mentioned, subscribed, authored, assigned, or otherwise present
+  in your unread inbox; the notification reason alone does not prove a new comment.
+  The title identifies the commenter and issue/PR. `@YOU` identifies a thread
+  with GitHub's mention reason; `NEW` identifies other threads. This does not
+  prove the latest comment itself mentions you. Unchanged threads reuse cached
+  comment data until GitHub reports new activity or a different read timestamp.
+  Discussions are not currently included.
+  A successful browser-open command clears that comment alert immediately on blip.
+  A later human comment gets a new ID and returns. Acknowledgments persist beside
+  your config in an ignored `*.alerts.local.json` file, independently of GitHub's
+  inbox; clicking does not mark GitHub notifications read or unsubscribe you.
+- **D / Deployments:** the latest meaningful completed result per configured
+  workflow and branch. Failure, timeout, startup failure, and action-required
+  results show a red `FAIL`; a newer success clears it. A retry in progress keeps
+  the prior failure visible. Cancelled/skipped/neutral runs do not hide a prior
+  failure or create an alert. Clicking opens the failed Actions run and leaves it
+  visible until recovery. Only push, manual dispatch, repository dispatch, release,
+  and schedule events are eligible. PR events and runs linked to PRs are excluded,
+  even if they use the production branch. Up to 1,000 completed runs are inspected
+  per workflow to find the latest eligible result; reaching that limit reports a
+  refresh error. This observes workflow outcomes, not actual service health.
+  Deployment results are cached for two minutes between polling cycles to limit
+  Actions API traffic; browser opening and comment dismissal remain immediate.
+
+The companion uses GitHub's [notification API](https://docs.github.com/en/rest/activity/notifications)
+and [workflow-run API](https://docs.github.com/en/rest/actions/workflow-runs).
+The CLI login needs access to notifications and Actions in the relevant repositories.
+
 - **M / Merge:** your non-draft PRs with enough effective approvals, GitHub's
   approved review decision, or **no outstanding review requests**. This is your
   personal merge queue, not a claim that all branch protections pass.
@@ -82,7 +134,12 @@ content STALE DATA; clicking a displayed item still opens its GitHub URL
 immediately, even before the first refresh after a companion restart. Links are
 constructed from validated `owner/repo/pull/number` or `owner/repo/issues/number`
 IDs on the fixed `github.com` host, without checking snapshot age or revision.
-A maximum of 60 rows is sent to the device, with truncation shown in the footer.
+Comment IDs add validated numeric GitHub comment anchors; deployment IDs use
+`owner/repo/actions/runs/number`. All three kinds open immediately with stale data.
+A maximum of 60 rows is sent to the device after locally acknowledged comments
+are removed, with truncation shown in the footer.
+Large payloads are shortened further to fit the device's 16 KiB input buffer,
+with `USB limit` shown in the footer. Higher-priority rows are retained first.
 GitHub CLI queries are capped at 1,000 candidates per category and repository.
 Owner discovery rejects searches reaching 1,000 candidates rather than silently
 omitting repositories. Newly opened PRs may wait for GitHub search indexing.

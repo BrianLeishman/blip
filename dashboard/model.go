@@ -53,8 +53,12 @@ func (s Snapshot) SameContent(next Snapshot) bool {
 // Identity keeps the item number first so long repository names cannot hide it.
 func (r Row) Identity() string {
 	parts := strings.Split(r.ID, "/")
+	if len(parts) == 5 && parts[2] == "actions" && parts[3] == "runs" {
+		return "run " + parts[4] + " " + parts[0] + "/" + parts[1]
+	}
 	if len(parts) != 4 {
 		return ""
 	}
-	return "#" + parts[3] + " " + parts[0] + "/" + parts[1]
+	number, _, _ := strings.Cut(parts[3], "#")
+	return "#" + number + " " + parts[0] + "/" + parts[1]
 }

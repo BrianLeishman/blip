@@ -48,6 +48,8 @@ func TestIdentity(t *testing.T) {
 	for _, tc := range []struct{ id, want string }{
 		{"Org/repo/pull/123", "#123 Org/repo"},
 		{"Org/repo/issues/456", "#456 Org/repo"},
+		{"Org/repo/pull/123#discussion_r99", "#123 Org/repo"},
+		{"Org/repo/actions/runs/12345", "run 12345 Org/repo"},
 		{"", ""},
 	} {
 		if got := (Row{ID: tc.id}).Identity(); got != tc.want {

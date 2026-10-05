@@ -75,7 +75,7 @@ func draw() {
 	screen.FillScreen(bg)
 	label(10, 17, "blip", green)
 	label(48, 17, "Brian's Little Information Panel", muted)
-	ready, mine, review, urgent := 0, 0, 0, 0
+	ready, mine, review, urgent, comments, deployments := 0, 0, 0, 0, 0, 0
 	for _, r := range snapshot.Rows {
 		switch r.Section {
 		case "ready":
@@ -86,13 +86,28 @@ func draw() {
 			review++
 		case "urgent":
 			urgent++
+		case "comment":
+			comments++
+		case "deployment":
+			deployments++
 		}
 	}
-	label(10, 36, "MERGE "+strconv.Itoa(ready), green)
-	label(90, 36, "MINE "+strconv.Itoa(mine), muted)
-	label(166, 36, "REVIEW "+strconv.Itoa(review), amber)
-	if urgent > 0 {
-		label(261, 36, "! "+strconv.Itoa(urgent), red)
+	x := int16(10)
+	for _, group := range []struct {
+		name     string
+		count    int
+		color    color.RGBA
+		optional bool
+	}{
+		{"MERGE", ready, green, false}, {"MINE", mine, muted, false}, {"REVIEW", review, amber, false},
+		{"C", comments, amber, true}, {"D", deployments, red, true}, {"!", urgent, red, true},
+	} {
+		if group.optional && group.count == 0 {
+			continue
+		}
+		text := group.name + " " + strconv.Itoa(group.count)
+		label(x, 36, text, group.color)
+		x += int16((len(text) + 2) * 6)
 	}
 
 	screen.FillRectangle(8, 43, 304, 1, muted)
@@ -124,6 +139,14 @@ func draw() {
 			if r.Section == "urgent" {
 				c = red
 				marker = "!"
+			}
+			if r.Section == "comment" {
+				c = amber
+				marker = "C"
+			}
+			if r.Section == "deployment" {
+				c = red
+				marker = "D"
 			}
 			if i == selected {
 				screen.FillRectangle(6, y-11, 308, 16, highlight)

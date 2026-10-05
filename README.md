@@ -25,6 +25,11 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
   and personal accounts; skip archived repositories.
 - **Extra authors:** optionally treat Dependabot and configured GitHub accounts
   as yours, hiding their PRs assigned exclusively to somebody else.
+- **Comments:** unread human comments on subscribed issues and PRs. Click to open
+  the specific comment and clear the alert locally; new comments bring it back.
+- **Deployments:** unresolved failures from configured production workflows.
+  These stay visible until a later successful deployment. PR CI failures remain
+  in the existing PR status display.
 
 Running checks get a spinner. Long selected titles marquee. Turn past either end
 of the list to clear the selection and stop the scrolling title. The footer shows

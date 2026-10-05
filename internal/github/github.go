@@ -17,12 +17,14 @@ import (
 )
 
 type Config struct {
-	UrgentQuery       string   `json:"urgent_query,omitempty"`
-	Repositories      []string `json:"repositories,omitempty"`
-	Owners            []string `json:"owners,omitempty"`
-	IncludeDependabot bool     `json:"include_dependabot,omitempty"`
-	AdditionalAuthors []string `json:"additional_authors,omitempty"`
-	RequiredApprovals int      `json:"required_approvals"`
+	UrgentQuery       string               `json:"urgent_query,omitempty"`
+	Repositories      []string             `json:"repositories,omitempty"`
+	Owners            []string             `json:"owners,omitempty"`
+	IncludeDependabot bool                 `json:"include_dependabot,omitempty"`
+	AdditionalAuthors []string             `json:"additional_authors,omitempty"`
+	CommentsSince     string               `json:"comments_since,omitempty"`
+	Deployments       []DeploymentWorkflow `json:"deployments,omitempty"`
+	RequiredApprovals int                  `json:"required_approvals"`
 }
 type Item struct {
 	Number                                                  int
@@ -116,9 +118,37 @@ func Validate(c Config) error {
 	if c.RequiredApprovals < 1 {
 		return fmt.Errorf("required_approvals must be positive")
 	}
+	if c.CommentsSince != "" {
+		if _, err := time.Parse(time.RFC3339, c.CommentsSince); err != nil {
+			return fmt.Errorf("comments_since must be an RFC3339 timestamp: %w", err)
+		}
+	}
+	for _, d := range c.Deployments {
+		if !ValidRepository(d.Repository) || !c.includesRepository(d.Repository) || !validWorkflow(d.Workflow) || d.Branch == "" || strings.ContainsAny(d.Branch, "\r\n\x00") {
+			return fmt.Errorf("invalid deployment workflow configuration")
+		}
+	}
 	return nil
 }
+
+// Client caches comments on unchanged notification threads between refreshes.
+// Use one client per serial polling loop; Fetch calls must not overlap.
+type Client struct {
+	config      Config
+	comments    map[string]cachedComments
+	deployments map[DeploymentWorkflow]cachedDeployment
+}
+
+func NewClient(c Config) *Client {
+	return &Client{config: c, comments: map[string]cachedComments{}, deployments: map[DeploymentWorkflow]cachedDeployment{}}
+}
+
 func Fetch(ctx context.Context, c Config) (Result, error) {
+	return NewClient(c).Fetch(ctx)
+}
+
+func (client *Client) Fetch(ctx context.Context) (Result, error) {
+	c := client.config
 	result := Result{Snapshot: dashboard.Snapshot{Version: 1, Revision: strconv.FormatInt(time.Now().UnixNano(), 10), Status: "GitHub connected"}, URLs: map[string]string{}}
 	if err := Validate(c); err != nil {
 		return result, err
@@ -187,7 +217,15 @@ func Fetch(ctx context.Context, c Config) (Result, error) {
 			}
 		}
 	}
-	rank := map[string]int{"ready": 0, "mine": 1, "review": 2, "urgent": 3}
+	alerts, err := client.fetchAlerts(ctx, viewer.Login)
+	if err != nil {
+		return result, err
+	}
+	result.Snapshot.Rows = append(result.Snapshot.Rows, alerts...)
+	for _, row := range alerts {
+		result.URLs[row.ID] = "https://github.com/" + row.ID
+	}
+	rank := map[string]int{"deployment": 0, "comment": 1, "ready": 2, "mine": 3, "review": 4, "urgent": 5}
 	sort.SliceStable(result.Snapshot.Rows, func(i, j int) bool {
 		a, b := result.Snapshot.Rows[i], result.Snapshot.Rows[j]
 		if a.Section == "review" && b.Section == "review" {
@@ -195,12 +233,6 @@ func Fetch(ctx context.Context, c Config) (Result, error) {
 		}
 		return rank[a.Section] < rank[b.Section]
 	})
-	total := len(result.Snapshot.Rows)
-	if total > dashboard.MaxRows {
-		result.Snapshot.Rows = result.Snapshot.Rows[:dashboard.MaxRows]
-		result.Snapshot.Status = fmt.Sprintf("Showing %d of %d", dashboard.MaxRows, total)
-	}
-
 	return result, nil
 }
 func SafeURL(raw string) bool {

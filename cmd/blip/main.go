@@ -45,11 +45,15 @@ func main() {
 		}
 	}
 	if *once {
-		r, err := fetch(ctx, config)
+		r, err := fetch(ctx, ghdata.NewClient(config))
 		if err != nil {
 			log.Fatal(err)
 		}
-		b, _ := json.MarshalIndent(r.Snapshot, "", "  ")
+		state, err := loadAlertState(ctx, *configPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, _ := json.MarshalIndent(state.filter(r.Snapshot), "", "  ")
 		fmt.Println(string(b))
 		return
 	}
@@ -67,7 +71,11 @@ func main() {
 				continue
 			}
 		}
-		if err := run(ctx, name, config, *probe, *interval); err != nil && ctx.Err() == nil {
+		state, err := loadAlertState(ctx, *configPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := run(ctx, name, config, state, *probe, *interval); err != nil && ctx.Err() == nil {
 			log.Print(err)
 		}
 		pause(ctx, 2*time.Second)
@@ -105,10 +113,10 @@ func detect(ctx context.Context) (string, error) {
 	}
 	return matches[0], nil
 }
-func fetch(ctx context.Context, c ghdata.Config) (ghdata.Result, error) {
+func fetch(ctx context.Context, client *ghdata.Client) (ghdata.Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	return ghdata.Fetch(ctx, c)
+	return client.Fetch(ctx)
 }
 
 type update struct {
@@ -116,7 +124,7 @@ type update struct {
 	err    error
 }
 
-func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval time.Duration) error {
+func run(ctx context.Context, name string, c ghdata.Config, state *alertState, probe bool, interval time.Duration) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	p, err := serial.Open(name, &serial.Mode{BaudRate: 115200})
@@ -152,8 +160,9 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 	updates := make(chan update, 1)
 	if !probe {
 		go func() {
+			client := ghdata.NewClient(c)
 			for {
-				r, e := fetch(ctx, c)
+				r, e := fetch(ctx, client)
 				select {
 				case updates <- update{r, e}:
 				case <-ctx.Done():
@@ -192,6 +201,15 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 		lastSend = time.Now()
 		return nil
 	}
+	publish := func() error {
+		current.Snapshot = state.filter(current.Snapshot)
+		var err error
+		current.Snapshot, wire, err = snapshotWire(current.Snapshot)
+		if err != nil {
+			return err
+		}
+		return send()
+	}
 
 	for {
 		select {
@@ -206,23 +224,7 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 			}
 			current = u.result
 			lastFetch = time.Now()
-			// Bound the wire format to the firmware's fixed input buffer.
-			for i := range current.Snapshot.Rows {
-				r := &current.Snapshot.Rows[i]
-				runes := []rune(r.Title)
-				if len(runes) > 100 {
-					r.Title = string(runes[:100])
-				}
-			}
-			b, e := json.Marshal(current.Snapshot)
-			if e != nil {
-				return e
-			}
-			if len(b) >= 16384 {
-				return errors.New("snapshot exceeds device buffer")
-			}
-			wire = append(b, '\n')
-			if e = send(); e != nil {
+			if e := publish(); e != nil {
 				return e
 			}
 			log.Printf("Dashboard refreshed: %d rows", len(current.Snapshot.Rows))
@@ -264,6 +266,16 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 					log.Printf("Open browser: %v", err)
 				} else {
 					log.Printf("Opened %s", e.ID)
+					if strings.Contains(e.ID, "#") {
+						if err := state.acknowledge(ctx, e.ID); err != nil {
+							log.Printf("Save comment acknowledgment: %v", err)
+							continue
+						}
+						current.Snapshot.Revision = fmt.Sprintf("%d", time.Now().UnixNano())
+						if err := publish(); err != nil {
+							return err
+						}
+					}
 				}
 			}
 		}
@@ -274,18 +286,40 @@ func run(ctx context.Context, name string, c ghdata.Config, probe bool, interval
 // GitHub URL locally without consulting refresh state or snapshot revisions.
 func openTarget(e dashboard.Event) (string, bool) {
 	parts := strings.Split(e.ID, "/")
-	if len(parts) != 4 || !ghdata.ValidRepository(parts[0]+"/"+parts[1]) {
+	if len(parts) < 4 || !ghdata.ValidRepository(parts[0]+"/"+parts[1]) {
 		return "", false
 	}
-	if parts[2] != "pull" && parts[2] != "issues" {
-		return "", false
+	positive := func(s string) bool {
+		if s == "" || s[0] < '1' || s[0] > '9' {
+			return false
+		}
+		for _, r := range s {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+		return true
 	}
-	if len(parts[3]) == 0 || parts[3][0] < '1' || parts[3][0] > '9' {
-		return "", false
-	}
-	for _, digit := range parts[3] {
-		if digit < '0' || digit > '9' {
+	if parts[2] == "actions" {
+		if len(parts) != 5 || parts[3] != "runs" || !positive(parts[4]) {
 			return "", false
+		}
+	} else {
+		if len(parts) != 4 || (parts[2] != "pull" && parts[2] != "issues") {
+			return "", false
+		}
+		number, anchor, hasAnchor := strings.Cut(parts[3], "#")
+		if !positive(number) {
+			return "", false
+		}
+		if hasAnchor {
+			valid := strings.HasPrefix(anchor, "issuecomment-") && positive(strings.TrimPrefix(anchor, "issuecomment-"))
+			if parts[2] == "pull" {
+				valid = valid || strings.HasPrefix(anchor, "discussion_r") && positive(strings.TrimPrefix(anchor, "discussion_r")) || strings.HasPrefix(anchor, "pullrequestreview-") && positive(strings.TrimPrefix(anchor, "pullrequestreview-"))
+			}
+			if !valid {
+				return "", false
+			}
 		}
 	}
 	return "https://github.com/" + e.ID, true
