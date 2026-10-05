@@ -74,10 +74,20 @@ func (s *alertState) acknowledge(ctx context.Context, id string) error {
 
 func (s *alertState) filter(snapshot dashboard.Snapshot) dashboard.Snapshot {
 	rows := make([]dashboard.Row, 0, len(snapshot.Rows))
+	queued := map[string]bool{}
 	for _, r := range snapshot.Rows {
-		if r.Section != "comment" || !s.opened[r.ID] {
-			rows = append(rows, r)
+		if r.Section != "comment" {
+			queued[r.ID] = true
 		}
+	}
+	for _, r := range snapshot.Rows {
+		if r.Section == "comment" {
+			parent, _, _ := strings.Cut(r.ID, "#")
+			if s.opened[r.ID] || queued[parent] {
+				continue
+			}
+		}
+		rows = append(rows, r)
 	}
 	snapshot.Rows = rows
 	if len(rows) > dashboard.MaxRows {

@@ -53,6 +53,11 @@ names, and no blanket list of failed Actions runs. Archived repositories are ski
   containing text. Comments must be newer than both the initial cutoff and the
   thread's GitHub read timestamp. Bots, your own comments, empty review votes,
   CI notifications, and state changes without a new human comment are excluded.
+  Draft PRs do not produce comment alerts. Standalone PR comment alerts require
+  earlier participation (you authored, commented on, or reviewed the PR), or an
+  unread human comment directly mentioning your account. An existing PR/issue row
+  takes precedence over its comment row, so a queued item appears only once.
+  Draft state is checked on each refresh even when comment contents are cached.
   Threads can be mentioned, subscribed, authored, assigned, or otherwise present
   in your unread inbox; the notification reason alone does not prove a new comment.
   The title identifies the commenter and issue/PR. `@YOU` identifies a thread

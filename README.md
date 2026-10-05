@@ -27,6 +27,8 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
   as yours, hiding their PRs assigned exclusively to somebody else.
 - **Comments:** unread human comments on subscribed issues and PRs. Click to open
   the specific comment and clear the alert locally; new comments bring it back.
+  Drafts are excluded, queued items appear once, and standalone PR alerts cover
+  conversations you've participated in or direct mentions.
 - **Deployments:** unresolved failures from configured production workflows.
   These stay visible until a later successful deployment. PR CI failures remain
   in the existing PR status display.

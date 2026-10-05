@@ -44,3 +44,28 @@ func TestAcknowledgedCommentsDoNotConsumeDisplayLimit(t *testing.T) {
 		t.Fatal("hidden comments displaced review work")
 	}
 }
+
+func TestQueuedItemsDoNotProduceDuplicateCommentEntries(t *testing.T) {
+	for _, section := range []string{"ready", "mine", "review", "urgent"} {
+		t.Run(section, func(t *testing.T) {
+			state := &alertState{opened: map[string]bool{}}
+			parent := "Org/widget/pull/7"
+			if section == "urgent" {
+				parent = "Org/widget/issues/7"
+			}
+			row := dashboard.Row{ID: parent, Section: section}
+			comment := dashboard.Row{ID: parent + "#issuecomment-8", Section: "comment"}
+			followup := dashboard.Row{ID: "Org/widget/pull/9#discussion_r10", Section: "comment"}
+			got := state.filter(dashboard.Snapshot{Rows: []dashboard.Row{comment, row, followup}})
+			if len(got.Rows) != 2 || got.Rows[0] != row || got.Rows[1] != followup {
+				t.Fatalf("rows %#v", got.Rows)
+			}
+			// Suppression isn't an acknowledgment: a follow-up may become relevant
+			// when the main item leaves the queue.
+			got = state.filter(dashboard.Snapshot{Rows: []dashboard.Row{comment}})
+			if len(got.Rows) != 1 {
+				t.Fatal("queue suppression permanently dismissed the comment")
+			}
+		})
+	}
+}

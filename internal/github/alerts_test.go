@@ -23,6 +23,7 @@ func TestUnreadHumanCommentsAndCache(t *testing.T) {
 	t.Setenv("CALLS", log)
 	fakeAlertsGH(t, `echo "$*" >> "$CALLS"
 case "$*" in
+ "api repos/Org/widget/pulls/7") echo "$PR" ;;
  *notifications\?*) echo "$THREADS" ;;
  *issues/7/comments*) echo '[[{"id":1,"body":"old","created_at":"2026-10-05T09:00:00Z","user":{"login":"Old"}},{"id":2,"body":"seen","created_at":"2026-10-05T10:30:00Z","user":{"login":"Seen"}},{"id":3,"body":"self","created_at":"2026-10-05T12:30:00Z","user":{"login":"viewer"}},{"id":4,"body":"bot","created_at":"2026-10-05T14:30:00Z","user":{"login":"automation","type":"Bot"}},{"id":5,"body":"human","created_at":"2026-10-05T11:30:00Z","user":{"login":"Teammate"}}]]' ;;
  *pulls/7/comments*) echo '[[{"id":6,"body":"inline","created_at":"2026-10-05T12:00:00Z","user":{"login":"Reviewer"}},{"id":8,"body":"bot","created_at":"2026-10-05T16:00:00Z","user":{"login":"app[bot]"}}]]' ;;
@@ -30,6 +31,7 @@ case "$*" in
  *) exit 1 ;;
 esac
 `)
+	t.Setenv("PR", `{"draft":false,"user":{"login":"Author"}}`)
 	thread := notification{ID: "1", Unread: true, Reason: "subscribed", UpdatedAt: "2026-10-05T16:00:00Z", LastReadAt: "2026-10-05T11:00:00Z"}
 	thread.Repository.FullName = "Org/widget"
 	thread.Subject.Type = "PullRequest"
@@ -81,10 +83,17 @@ esac
 	if strings.Count(string(calls), "issues/7/comments") != 2 {
 		t.Fatal("new activity did not refresh comments")
 	}
+	// Changing draft status must hide a previously cached alert immediately.
+	t.Setenv("PR", `{"draft":true,"user":{"login":"Author"}}`)
+	rows, err := client.fetchAlerts(t.Context(), "Viewer")
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("draft retained cached comments: %#v %v", rows, err)
+	}
+	t.Setenv("PR", `{"draft":false,"user":{"login":"Author"}}`)
 	// Advancing the inbox's read time removes all earlier comments.
 	thread.LastReadAt = "2026-10-05T18:00:00Z"
 	setThreads([]notification{thread})
-	rows, err := client.fetchAlerts(t.Context(), "Viewer")
+	rows, err = client.fetchAlerts(t.Context(), "Viewer")
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("read comments retained: %#v %v", rows, err)
 	}
@@ -196,5 +205,57 @@ esac
 	}
 	if strings.Count(string(calls), "/actions/workflows/") != 2 {
 		t.Fatal("deployment cache did not reduce polling")
+	}
+}
+
+func TestPRCommentsRequireParticipationOrDirectMention(t *testing.T) {
+	for _, tc := range []struct {
+		name                                 string
+		issueComments, reviews, body, author string
+		visible                              bool
+	}{
+		{"initial author comment", "[]", "[]", "How to test this change", "Author", false},
+		{"reviewed before cutoff", "[]", `[{"id":2,"body":"","submitted_at":"2026-10-04T10:00:00Z","user":{"login":"Viewer"}}]`, "Follow-up", "Author", true},
+		{"commented before cutoff", `[{"id":2,"body":"Question","created_at":"2026-10-04T10:00:00Z","user":{"login":"Viewer"}}]`, "[]", "Follow-up", "Author", true},
+		{"own PR", "[]", "[]", "Follow-up", "Viewer", true},
+		{"direct mention", "[]", "[]", "Could @viewer take a look?", "Author", true},
+		{"similar username", "[]", "[]", "Could @ViewerElse take a look?", "Author", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeAlertsGH(t, `case "$*" in
+ *issues/7/comments*) echo "$COMMENTS" ;;
+ *pulls/7/comments*) echo '[[]]' ;;
+ *pulls/7/reviews*) echo "$REVIEWS" ;;
+ *) exit 1 ;;
+esac
+`)
+			// All three comment sources are paginated, including the thread's history.
+			var comments []comment
+			if err := json.Unmarshal([]byte(tc.issueComments), &comments); err != nil {
+				t.Fatal(err)
+			}
+			latest := comment{ID: 3, Body: tc.body, CreatedAt: "2026-10-05T12:00:00Z"}
+			latest.User.Login = "Author"
+			comments = append(comments, latest)
+			b, err := json.Marshal([][]comment{comments})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("COMMENTS", string(b))
+			t.Setenv("REVIEWS", "["+tc.reviews+"]")
+			n := notification{Reason: "mention"} // Old mention reason alone must not bypass participation.
+			n.Repository.FullName = "Org/widget"
+			n.Subject.Type = "PullRequest"
+			n.Subject.URL = "https://api.github.com/repos/Org/widget/pulls/7"
+			pr := commentPR{}
+			pr.User.Login = tc.author
+			rows, err := fetchThreadComments(t.Context(), n, "Viewer", "2026-10-05T00:00:00Z", pr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (len(rows) > 0) != tc.visible {
+				t.Fatalf("rows %#v", rows)
+			}
+		})
 	}
 }

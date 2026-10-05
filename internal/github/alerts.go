@@ -60,6 +60,11 @@ type comment struct {
 	User        struct{ Login, Type string }
 }
 
+type commentPR struct {
+	Draft bool
+	User  struct{ Login string }
+}
+
 type cachedComments struct {
 	signature string
 	rows      []dashboard.Row
@@ -122,13 +127,28 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 		active[n.ID] = true
 		signature := n.UpdatedAt + "/" + n.LastReadAt + "/" + n.Subject.Title + "/" + n.Reason
 		tasks = append(tasks, func() ([]dashboard.Row, error) {
+			var pr commentPR
+			if n.Subject.Type == "PullRequest" {
+				path, _, ok := subjectPath(n.Subject.URL, n.Repository.FullName, "pulls")
+				if !ok {
+					return nil, fmt.Errorf("invalid notification subject URL")
+				}
+				// Draft changes need not create a notification. Check current PR state
+				// even when its comment contents are already cached.
+				if err := gh(ctx, &pr, "api", path); err != nil {
+					return nil, err
+				}
+				if pr.Draft {
+					return nil, nil
+				}
+			}
 			cacheMu.Lock()
 			cached, ok := client.comments[n.ID]
 			cacheMu.Unlock()
 			if ok && cached.signature == signature {
 				return cached.rows, nil
 			}
-			rows, err := fetchThreadComments(ctx, n, viewer, client.config.CommentsSince)
+			rows, err := fetchThreadComments(ctx, n, viewer, client.config.CommentsSince, pr)
 			if err == nil {
 				cacheMu.Lock()
 				client.comments[n.ID] = cachedComments{signature, rows}
@@ -206,7 +226,7 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 	return rows, nil
 }
 
-func fetchThreadComments(ctx context.Context, n notification, viewer, since string) ([]dashboard.Row, error) {
+func fetchThreadComments(ctx context.Context, n notification, viewer, since string, pr commentPR) ([]dashboard.Row, error) {
 	kind := "issues"
 	browserKind := "issues"
 	if n.Subject.Type == "PullRequest" {
@@ -224,6 +244,8 @@ func fetchThreadComments(ctx context.Context, n notification, viewer, since stri
 	type source struct{ path, anchor string }
 	sources := []source{{"issues/" + number + "/comments?per_page=100&since=" + url.QueryEscape(floor.Format(time.RFC3339)), "issuecomment-"}}
 	if kind == "pulls" {
+		// Look at earlier participation too, not just comments after the cutoff.
+		sources[0].path = "issues/" + number + "/comments?per_page=100"
 		sources = append(sources, source{"pulls/" + number + "/comments?per_page=100", "discussion_r"}, source{"pulls/" + number + "/reviews?per_page=100", "pullrequestreview-"})
 	}
 	type datedRow struct {
@@ -231,6 +253,8 @@ func fetchThreadComments(ctx context.Context, n notification, viewer, since stri
 		row dashboard.Row
 	}
 	var dated []datedRow
+	participated := strings.EqualFold(pr.User.Login, viewer)
+	mentioned := false
 	for _, s := range sources {
 		var pages [][]comment
 		if err := gh(ctx, &pages, "api", "--paginate", "--slurp", "repos/"+n.Repository.FullName+"/"+s.path); err != nil {
@@ -243,9 +267,13 @@ func fetchThreadComments(ctx context.Context, n notification, viewer, since stri
 					stamp = c.SubmittedAt
 				}
 				at, err := time.Parse(time.RFC3339, stamp)
+				if err == nil && strings.EqualFold(c.User.Login, viewer) {
+					participated = true
+				}
 				if err != nil || !at.After(floor) || c.ID <= 0 || strings.TrimSpace(c.Body) == "" || strings.EqualFold(c.User.Login, viewer) || c.User.Type == "Bot" || strings.HasSuffix(strings.ToLower(c.User.Login), "[bot]") {
 					continue
 				}
+				mentioned = mentioned || mentionsUser(c.Body, viewer)
 				// One row per unread thread: click the latest actual human comment, not a
 				// notification's sometimes-placeholder latest_comment_url.
 				badge := "NEW"
@@ -257,11 +285,25 @@ func fetchThreadComments(ctx context.Context, n notification, viewer, since stri
 			}
 		}
 	}
+	if kind == "pulls" && !participated && !mentioned {
+		return nil, nil
+	}
 	sort.SliceStable(dated, func(i, j int) bool { return dated[i].at.After(dated[j].at) })
 	if len(dated) > 0 {
 		return []dashboard.Row{dated[0].row}, nil
 	}
 	return nil, nil
+}
+
+func mentionsUser(body, viewer string) bool {
+	for _, word := range strings.FieldsFunc(body, func(r rune) bool {
+		return !(r == '@' || r == '-' || r == '_' || r == '.' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
+	}) {
+		if strings.EqualFold(strings.TrimRight(word, "."), "@"+viewer) {
+			return true
+		}
+	}
+	return false
 }
 
 type workflowRun struct {
