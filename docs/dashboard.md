@@ -58,6 +58,7 @@ names, and no blanket list of failed Actions runs. Archived repositories are ski
   unread human comment directly mentioning your account. An existing PR/issue row
   takes precedence over its comment row, so a queued item appears only once.
   Draft state is checked on each refresh even when comment contents are cached.
+  Conflicted PRs that are not treated as yours are also excluded from comment alerts.
   Threads can be mentioned, subscribed, authored, assigned, or otherwise present
   in your unread inbox; the notification reason alone does not prove a new comment.
   The title identifies the commenter and issue/PR. `@YOU` identifies a thread
@@ -107,6 +108,9 @@ The CLI login needs access to notifications and Actions in the relevant reposito
   LGTM-label workflow does not itself count as the LGTM label.
 - **R / Review:** `is:open -is:draft review-requested:@me`, sorted by **least
   recently updated**, with fewer than the configured number of approvals.
+  PRs with merge conflicts are hidden until the conflict is resolved. Your own,
+  eligible Dependabot, and additional-author PRs keep their conflict status visible
+  in Mine.
   PRs with queued/running checks or failed checks (including cancelled, timed-out,
   or action-required runs) are hidden until those checks clear. PRs with no checks
   remain eligible, as do successful, skipped, or neutral checks. This filter applies

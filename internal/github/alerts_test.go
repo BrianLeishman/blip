@@ -90,6 +90,17 @@ esac
 		t.Fatalf("draft retained cached comments: %#v %v", rows, err)
 	}
 	t.Setenv("PR", `{"draft":false,"user":{"login":"Author"}}`)
+	// Conflicts on somebody else's PR must not reappear as cached comment alerts.
+	t.Setenv("PR", `{"draft":false,"mergeable_state":"dirty","user":{"login":"Author"}}`)
+	rows, err = client.fetchAlerts(t.Context(), "Viewer")
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("conflict retained cached comments: %#v %v", rows, err)
+	}
+	t.Setenv("PR", `{"draft":false,"mergeable_state":"dirty","user":{"login":"Viewer"}}`)
+	rows, err = client.fetchAlerts(t.Context(), "Viewer")
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("own conflict comment hidden: %#v %v", rows, err)
+	}
 	// Advancing the inbox's read time removes all earlier comments.
 	thread.LastReadAt = "2026-10-05T18:00:00Z"
 	setThreads([]notification{thread})

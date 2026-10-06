@@ -230,3 +230,30 @@ func TestSharedAuthorAssignments(t *testing.T) {
 		}
 	}
 }
+
+func TestConflictOwnershipUsesConfiguredAuthorsAndAssignmentRules(t *testing.T) {
+	c := Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}}
+	for _, tc := range []struct {
+		author, assignee string
+		owned            bool
+	}{
+		{"Viewer", "Other", true}, {"Other", "Viewer", false},
+		{"ExtraUser", "", true}, {"ExtraUser", "Viewer", true}, {"ExtraUser", "Other", false},
+		{"app/dependabot", "", true}, {"dependabot[bot]", "Viewer", true}, {"dependabot[bot]", "Other", false},
+	} {
+		item := Item{}
+		item.Author.Login = tc.author
+		if tc.assignee != "" {
+			item.Assignees = []struct{ Login string }{{tc.assignee}}
+		}
+		if got := item.ownedBy("Viewer", c); got != tc.owned {
+			t.Fatalf("author %s assignee %s: got %t want %t", tc.author, tc.assignee, got, tc.owned)
+		}
+	}
+	item := Item{}
+	item.Author.Login = "dependabot[bot]"
+	c.IncludeDependabot = false
+	if item.ownedBy("Viewer", c) {
+		t.Fatal("disabled Dependabot counted as owned")
+	}
+}

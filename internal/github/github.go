@@ -265,6 +265,9 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 				continue
 			}
 			if query.section == "review" {
+				if item.MergeStateStatus == "DIRTY" {
+					continue
+				}
 				switch Checks(item.StatusCheckRollup) {
 				case "!", "~":
 					continue
@@ -290,10 +293,6 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 				if n >= c.RequiredApprovals {
 					continue
 				}
-				if item.MergeStateStatus == "DIRTY" {
-					badge = "CONFLICT"
-					detail = fmt.Sprintf("#%d %d/%d / merge conflict / CI:%s", item.Number, n, c.RequiredApprovals, Checks(item.StatusCheckRollup))
-				}
 			} else {
 				rowSection, badge, detail = OwnStatus(item, n, c.RequiredApprovals)
 			}
@@ -307,6 +306,24 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 		}
 	}
 	return result, updated, nil
+}
+
+func (item Item) ownedBy(viewer string, c Config) bool {
+	if !item.visibleTo(viewer, c) {
+		return false
+	}
+	if strings.EqualFold(item.Author.Login, viewer) {
+		return true
+	}
+	if c.IncludeDependabot && (strings.EqualFold(item.Author.Login, "app/dependabot") || strings.EqualFold(item.Author.Login, "dependabot[bot]")) {
+		return true
+	}
+	for _, author := range c.AdditionalAuthors {
+		if strings.EqualFold(item.Author.Login, author) {
+			return true
+		}
+	}
+	return false
 }
 
 // Dependabot and additional-author work belongs here only while unassigned or assigned

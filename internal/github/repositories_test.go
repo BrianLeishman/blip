@@ -213,3 +213,37 @@ esac
 		})
 	}
 }
+
+func TestConflictsHiddenFromReviewButRetainedForOwnedAuthors(t *testing.T) {
+	fakeAlertsGH(t, `case "$*" in
+ "pr list "*"--author @me") echo '[{"number":1,"mergeStateStatus":"DIRTY"}]' ;;
+ "pr list "*"--author dependabot[bot]") echo '[{"number":2,"mergeStateStatus":"DIRTY"}]' ;;
+ "pr list "*"--author ExtraUser") echo '[{"number":3,"mergeStateStatus":"DIRTY"}]' ;;
+ "pr list "*) echo '[{"number":4,"mergeStateStatus":"DIRTY"},{"number":5,"mergeStateStatus":"BLOCKED"},{"number":6,"mergeStateStatus":"BEHIND"},{"number":7,"mergeStateStatus":"UNKNOWN"}]' ;;
+ *pulls/4/reviews*) exit 1 ;;
+ "api "*) echo '[[]]' ;;
+ *) exit 1 ;;
+esac
+`)
+	result, _, err := fetchRepository(t.Context(), Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}, RequiredApprovals: 2}, "Org/widget", "Viewer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"Org/widget/pull/1", "Org/widget/pull/2", "Org/widget/pull/3", "Org/widget/pull/5", "Org/widget/pull/6", "Org/widget/pull/7"}
+	var got []string
+	for i, row := range result.Snapshot.Rows {
+		got = append(got, row.ID)
+		if i < 3 && (row.Section != "mine" || row.Badge != "CONFLICT") {
+			t.Fatalf("owned conflict hidden: %#v", row)
+		}
+		if i >= 3 && row.Section != "review" {
+			t.Fatalf("non-conflicted review misclassified: %#v", row)
+		}
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+	if result.URLs["Org/widget/pull/4"] != "" {
+		t.Fatal("conflicted review retained")
+	}
+}

@@ -61,8 +61,10 @@ type comment struct {
 }
 
 type commentPR struct {
-	Draft bool
-	User  struct{ Login string }
+	Draft          bool
+	User           struct{ Login string }
+	MergeableState string `json:"mergeable_state"`
+	Assignees      []struct{ Login string }
 }
 
 type cachedComments struct {
@@ -139,6 +141,11 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 					return nil, err
 				}
 				if pr.Draft {
+					return nil, nil
+				}
+				item := Item{Assignees: pr.Assignees}
+				item.Author.Login = pr.User.Login
+				if strings.EqualFold(pr.MergeableState, "dirty") && !item.ownedBy(viewer, client.config) {
 					return nil, nil
 				}
 			}
