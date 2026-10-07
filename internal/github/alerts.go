@@ -331,16 +331,16 @@ func eligibleDeployment(run workflowRun, branch string) bool {
 		return false
 	}
 	switch run.Conclusion {
-	case "success", "failure", "timed_out", "action_required", "startup_failure":
+	case "success", "cancelled", "failure", "timed_out", "action_required", "startup_failure":
 		return true
 	}
 	return false
 }
 
 func fetchDeployment(ctx context.Context, d DeploymentWorkflow) ([]dashboard.Row, error) {
-	// A created range also avoids GitHub serving stale branch-filtered results.
-	// No failure-only filter: a later successful run must clear an older failure.
-	base := "repos/" + d.Repository + "/actions/workflows/" + url.PathEscape(d.Workflow) + "/runs?per_page=20&status=completed&branch=" + url.QueryEscape(d.Branch) + "&created=" + url.QueryEscape(">=2008-01-01")
+	// Read the latest unfiltered history, then apply branch/event/outcome rules
+	// locally. Filtered searches can return older subsets of a busy workflow.
+	base := "repos/" + d.Repository + "/actions/workflows/" + url.PathEscape(d.Workflow) + "/runs?per_page=20"
 	for page := 1; page <= 50; page++ {
 		var response struct {
 			WorkflowRuns []workflowRun `json:"workflow_runs"`
@@ -353,7 +353,7 @@ func fetchDeployment(ctx context.Context, d DeploymentWorkflow) ([]dashboard.Row
 			if !eligibleDeployment(r, d.Branch) {
 				continue
 			}
-			if r.Conclusion == "success" {
+			if r.Conclusion == "success" || r.Conclusion == "cancelled" {
 				return nil, nil
 			}
 			if r.ID <= 0 {

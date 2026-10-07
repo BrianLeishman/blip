@@ -127,7 +127,7 @@ func TestDeploymentRecoveryAndExclusionOfPRRuns(t *testing.T) {
 	}{
 		{"new success clears", workflowRun{ID: 11, Event: "push", Status: "completed", Conclusion: "success", HeadBranch: "main"}, false},
 		{"retry still running", workflowRun{ID: 11, Event: "push", Status: "in_progress", HeadBranch: "main"}, true},
-		{"cancelled retry", workflowRun{ID: 11, Event: "push", Status: "completed", Conclusion: "cancelled", HeadBranch: "main"}, true},
+		{"cancelled retry clears older alert", workflowRun{ID: 11, Event: "push", Status: "completed", Conclusion: "cancelled", HeadBranch: "main"}, false},
 		{"PR event", workflowRun{ID: 11, Event: "pull_request", Status: "completed", Conclusion: "success", HeadBranch: "main"}, true},
 		{"PR target", workflowRun{ID: 11, Event: "pull_request_target", Status: "completed", Conclusion: "success", HeadBranch: "main"}, true},
 		{"linked PR", workflowRun{ID: 11, Event: "push", Status: "completed", Conclusion: "success", HeadBranch: "main", PullRequests: []struct{ Number int }{{3}}}, true},
@@ -266,6 +266,38 @@ esac
 			}
 			if (len(rows) > 0) != tc.visible {
 				t.Fatalf("rows %#v", rows)
+			}
+		})
+	}
+}
+
+func TestCancelledDeploymentsNeverAlertOrResurrectOlderFailures(t *testing.T) {
+	for _, tc := range []struct {
+		name, runs string
+		wantID     string
+	}{
+		{"cancelled alone", `[{"id":11,"event":"push","status":"completed","conclusion":"cancelled","head_branch":"main","created_at":"2026-10-07T12:00:00Z"}]`, ""},
+		{"latest success", `[{"id":10,"event":"push","status":"completed","conclusion":"failure","head_branch":"main","created_at":"2026-10-06T12:00:00Z"},{"id":11,"event":"push","status":"completed","conclusion":"success","head_branch":"main","created_at":"2026-10-07T12:00:00Z"}]`, ""},
+		{"later real failure", `[{"id":10,"event":"push","status":"completed","conclusion":"cancelled","head_branch":"main","created_at":"2026-10-06T12:00:00Z"},{"id":11,"event":"push","status":"completed","conclusion":"failure","head_branch":"main","created_at":"2026-10-07T12:00:00Z"}]`, "Org/widget/actions/runs/11"},
+		{"PR cancellation must not clear production failure", `[{"id":10,"event":"push","status":"completed","conclusion":"failure","head_branch":"main","created_at":"2026-10-06T12:00:00Z"},{"id":11,"event":"pull_request","status":"completed","conclusion":"cancelled","head_branch":"main","created_at":"2026-10-07T12:00:00Z"}]`, "Org/widget/actions/runs/10"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeAlertsGH(t, `case "$*" in
+ *branch=*|*status=*|*created=*) exit 1 ;;
+ *) echo "$RUNS" ;;
+esac
+`)
+			t.Setenv("RUNS", `{"workflow_runs":`+tc.runs+`}`)
+			rows, err := fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.wantID == "" {
+				if len(rows) != 0 {
+					t.Fatalf("unexpected alert: %#v", rows)
+				}
+			} else if len(rows) != 1 || rows[0].ID != tc.wantID {
+				t.Fatalf("wrong alert: %#v", rows)
 			}
 		})
 	}

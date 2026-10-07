@@ -30,7 +30,7 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
   Drafts are excluded, queued items appear once, and standalone PR alerts cover
   conversations you've participated in or direct mentions.
 - **Deployments:** unresolved failures from configured production workflows.
-  These stay visible until a later successful deployment. PR CI failures remain
+  A newer successful or cancelled run clears the alert. PR CI failures remain
   in the existing PR status display.
 
 Running checks get a spinner. Long selected titles marquee. Turn past either end

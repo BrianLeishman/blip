@@ -72,13 +72,16 @@ names, and no blanket list of failed Actions runs. Archived repositories are ski
   inbox; clicking does not mark GitHub notifications read or unsubscribe you.
 - **D / Deployments:** the latest meaningful completed result per configured
   workflow and branch. Failure, timeout, startup failure, and action-required
-  results show a red `FAIL`; a newer success clears it. A retry in progress keeps
-  the prior failure visible. Cancelled/skipped/neutral runs do not hide a prior
-  failure or create an alert. Clicking opens the failed Actions run and leaves it
-  visible until recovery. Only push, manual dispatch, repository dispatch, release,
+  results show a red `FAIL`; a newer success or cancellation clears the alert.
+  Cancellation is not treated as successful deployment, and never creates an alert.
+  A retry in progress keeps the prior failure visible. Skipped/neutral runs do not
+  hide a prior failure or create an alert. Clicking opens the failed Actions run.
+  Only push, manual dispatch, repository dispatch, release,
   and schedule events are eligible. PR events and runs linked to PRs are excluded,
-  even if they use the production branch. Up to 1,000 completed runs are inspected
-  per workflow to find the latest eligible result; reaching that limit reports a
+  even if they use the production branch. The latest unfiltered workflow history
+  is fetched and branch/event/outcome rules are applied locally, avoiding old
+  results from filtered Actions searches. Up to 1,000 runs are inspected
+  per workflow to find the latest eligible completed result; reaching that limit reports a
   refresh error. This observes workflow outcomes, not actual service health.
   Deployment results are cached for two minutes between polling cycles to limit
   Actions API traffic; browser opening and comment dismissal remain immediate.
