@@ -100,12 +100,14 @@ The CLI login needs access to notifications and Actions in the relevant reposito
   and CI status: `+` successful, `~` pending, `?` no checks. Failures take
   priority in the row badge (`n/n FAIL`), with LGTM still in the footer.
   PRs with queued/running CI show a spinner, including those with a failed
-  job and other jobs still running. Only the spinner area animates; unchanged
-  refreshes do not repaint the screen. Animation stops when data is stale.
+  job and other jobs still running. Animated rows are composed in a reusable RGB565
+  buffer and sent as one bounded bitmap, with separate title, spinner, and badge
+  clips. There is no visible blanking pass between frames; unchanged row images
+  and unchanged refreshes do not repaint the screen. CI animation stops when data is stale.
   Highlight an item to see its number, abbreviated repository, and compact status
   together on one footer line. Long repository names shorten before status; the
   list shows ten rows at a time. Long selected titles scroll after a short
-  reading pause, repainting only the title area. Turn past either end of the list
+  reading pause, replacing only that row's bitmap. Turn past either end of the list
   to clear the highlight and stop title scrolling; turn back to select again.
   Refreshes preserve that unselected state, and clicking it opens nothing. A successful
   LGTM-label workflow does not itself count as the LGTM label.

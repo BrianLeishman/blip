@@ -36,7 +36,7 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
 Running checks get a spinner. Long selected titles marquee. Turn past either end
 of the list to clear the selection and stop the scrolling title. The footer shows
 the item number, repository, and status. Content updates only repaint when the
-content changes; animations update their own small regions.
+content changes; animations replace only the affected row as a composed bitmap.
 
 Clicking opens a GitHub page—even when the displayed data is stale. **Blip never
 merges a PR, submits a review, or changes an issue.** The Merge section is a personal

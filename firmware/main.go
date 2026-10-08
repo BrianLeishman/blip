@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/BrianLeishman/blip/dashboard"
+	"github.com/BrianLeishman/blip/internal/display"
 	"tinygo.org/x/drivers/ili9341"
 	"tinygo.org/x/drivers/seesaw"
 	"tinygo.org/x/tinyfont"
@@ -35,6 +36,9 @@ var clicks int
 var encoderError string
 var spinnerFrame int
 var highlight = color.RGBA{28, 85, 150, 255}
+var rowRenderer display.Renderer
+var previousRows [dashboard.VisibleRows]display.Row
+var rowDrawn [dashboard.VisibleRows]bool
 
 func emit(e dashboard.Event) {
 	b, err := json.Marshal(e)
@@ -121,48 +125,8 @@ func draw() {
 			label(12, 90, "All clear. Nothing needs attention.", green)
 		}
 	} else {
-		// One continuous list, ten visible rows; selection scrolls the viewport.
-		start := scrollTop
-		for i := start; i < len(snapshot.Rows) && i < start+dashboard.VisibleRows; i++ {
-			r := snapshot.Rows[i]
-			y := int16(61 + (i-start)*17)
-			c := green
-			marker := "M"
-			if r.Section == "mine" {
-				c = muted
-				marker = "O"
-			}
-			if r.Section == "review" {
-				c = amber
-				marker = "R"
-			}
-			if r.Section == "urgent" {
-				c = red
-				marker = "!"
-			}
-			if r.Section == "comment" {
-				c = amber
-				marker = "C"
-			}
-			if r.Section == "deployment" {
-				c = red
-				marker = "D"
-			}
-			if i == selected {
-				screen.FillRectangle(6, y-11, 308, 16, highlight)
-				screen.FillRectangle(6, y-11, 3, 16, white)
-			}
-			label(10, y, marker, c)
-			title := ascii(r.Title, dashboard.TitleColumns)
-			if i == selected {
-				title = marquee.Text()
-			}
-			label(24, y, title, white)
-			if strings.HasSuffix(r.Badge, "FAIL") || r.Badge == "CONFLICT" {
-				c = red
-			}
-			label(263, y, ascii(r.Badge, 8), c)
-		}
+		// Compose each row before touching the LCD; no visible erase/glyph phases.
+		paintRows(true)
 	}
 	screen.FillRectangle(8, 224, 304, 1, muted)
 	status := snapshot.Status
@@ -198,27 +162,58 @@ func draw() {
 		}
 	}
 	label(10, 237, footer, muted)
-	drawSpinners()
 }
 
-// Animate only the small reserved CI column, preserving the rest of the screen.
-func drawSpinners() {
-	start := scrollTop
-	for i := start; i < len(snapshot.Rows) && i < start+dashboard.VisibleRows; i++ {
-		if !snapshot.Rows[i].ChecksRunning {
+// A single bounded bitmap transfer updates the title, highlight and status together.
+func paintRows(force bool) {
+	palette := display.Palette{Background: bg, Highlight: highlight, Text: white, Selection: white}
+	for slot := 0; slot < dashboard.VisibleRows && scrollTop+slot < len(snapshot.Rows); slot++ {
+		i := scrollTop + slot
+		r := snapshot.Rows[i]
+		frame := display.Row{Marker: "M", MarkerColor: green, BadgeColor: green, SpinnerColor: amber, Selected: i == selected}
+		switch r.Section {
+		case "mine":
+			frame.Marker = "O"
+			frame.MarkerColor = muted
+		case "review":
+			frame.Marker = "R"
+			frame.MarkerColor = amber
+		case "urgent":
+			frame.Marker = "!"
+			frame.MarkerColor = red
+		case "comment":
+			frame.Marker = "C"
+			frame.MarkerColor = amber
+		case "deployment":
+			frame.Marker = "D"
+			frame.MarkerColor = red
+		}
+		frame.Title = ascii(r.Title, dashboard.TitleColumns)
+		if frame.Selected {
+			frame.Title = marquee.Text()
+		}
+		frame.Badge = ascii(r.Badge, 8)
+		frame.BadgeColor = frame.MarkerColor
+		if strings.HasSuffix(r.Badge, "FAIL") || r.Badge == "CONFLICT" {
+			frame.BadgeColor = red
+		}
+		if r.ChecksRunning {
+			frame.Spinner = string("|/-\\"[spinnerFrame%4])
+			if time.Since(lastUpdate) > 90*time.Second {
+				frame.Spinner = "-"
+				frame.SpinnerColor = muted
+			}
+		}
+		if !force && rowDrawn[slot] && frame == previousRows[slot] {
 			continue
 		}
-		y := int16(61 + (i-start)*17)
-		background := bg
-		if i == selected {
-			background = highlight
+		// RGB565 upload replaces the entire row, including glyph backgrounds, in one pass.
+		if err := screen.DrawRGBBitmap8(6, int16(50+slot*17), rowRenderer.Render(frame, palette), display.RowWidth, display.RowHeight); err != nil {
+			emit(dashboard.Event{Kind: "display-error", Error: err.Error()})
+			continue
 		}
-		screen.FillRectangle(250, y-11, 10, 14, background)
-		glyph, ink := string("|/-\\"[spinnerFrame%4]), amber
-		if time.Since(lastUpdate) > 90*time.Second {
-			glyph, ink = "-", muted
-		}
-		label(251, y, glyph, ink)
+		previousRows[slot] = frame
+		rowDrawn[slot] = true
 	}
 }
 
@@ -392,16 +387,17 @@ func main() {
 			draw()
 			offlineShown = true
 		}
+		animated := false
 		if now.Sub(lastSpinner) >= 250*time.Millisecond && !lastUpdate.IsZero() && now.Sub(lastUpdate) <= 90*time.Second {
 			spinnerFrame = (spinnerFrame + 1) % 4
-			drawSpinners()
 			lastSpinner = now
+			animated = true
 		}
 		if selected >= scrollTop && selected < len(snapshot.Rows) && selected < scrollTop+dashboard.VisibleRows && marquee.Advance(now) {
-			y := int16(61 + (selected-scrollTop)*17)
-			// Redraw only the title; preserve highlight bar, badge and CI spinner.
-			screen.FillRectangle(24, y-11, dashboard.TitleColumns*6, 16, highlight)
-			label(24, y, marquee.Text(), white)
+			animated = true
+		}
+		if animated {
+			paintRows(false)
 		}
 		time.Sleep(time.Millisecond)
 	}
