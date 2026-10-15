@@ -16,7 +16,7 @@ const urgentQuery = `query($search:String!,$cursor:String){
  search(query:$search,type:ISSUE_ADVANCED,first:100,after:$cursor){
   issueCount pageInfo{hasNextPage endCursor}
   nodes{...on Issue{
-   number title state repository{nameWithOwner isArchived}
+   number title state updatedAt repository{nameWithOwner isArchived}
    issueFieldValues(first:100){pageInfo{hasNextPage} nodes{
     ...on IssueFieldSingleSelectValue{name field{...on IssueFieldSingleSelect{name}}}
    }}
@@ -28,9 +28,9 @@ const urgentQuery = `query($search:String!,$cursor:String){
 }`
 
 type urgentNode struct {
-	Number       int
-	Title, State string
-	Repository   struct {
+	Number                  int
+	Title, State, UpdatedAt string
+	Repository              struct {
 		NameWithOwner string
 		IsArchived    bool
 	}
@@ -123,7 +123,7 @@ func fetchUrgent(ctx context.Context, search string) ([]dashboard.Row, map[strin
 				continue
 			}
 			id := n.Repository.NameWithOwner + "/issues/" + strconv.Itoa(n.Number)
-			rows = append(rows, dashboard.Row{ID: id, Section: "urgent", Title: n.Title, Badge: "urgent"})
+			rows = append(rows, dashboard.Row{ID: id, Section: "urgent", Title: n.Title, Badge: "urgent", Activity: activityToken(n)})
 			urls[id] = "https://github.com/" + id
 		}
 		if !items.PageInfo.HasNextPage {

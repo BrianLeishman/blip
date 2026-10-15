@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-type Check struct{ Status, Conclusion, State string }
+type Check struct {
+	Status, Conclusion, State                                                            string
+	Name, Context, DetailsUrl, TargetUrl, StartedAt, CompletedAt, CreatedAt, Description string
+}
 
 // ChecksRunning is independent of failure: other jobs may still be running.
 func ChecksRunning(checks []Check) bool {

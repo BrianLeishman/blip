@@ -288,7 +288,11 @@ func fetchThreadComments(ctx context.Context, n notification, viewer, since stri
 					badge = "@YOU"
 				}
 				id := n.Repository.FullName + "/" + browserKind + "/" + number + "#" + s.anchor + strconv.FormatInt(c.ID, 10)
-				dated = append(dated, datedRow{at, dashboard.Row{ID: id, Section: "comment", Title: c.User.Login + ": " + n.Subject.Title, Badge: badge, Detail: "Comment from " + c.User.Login}})
+				activity := activityToken(struct {
+					Comment comment
+					Title   string
+				}{c, n.Subject.Title})
+				dated = append(dated, datedRow{at, dashboard.Row{ID: id, Section: "comment", Title: c.User.Login + ": " + n.Subject.Title, Badge: badge, Detail: "Comment from " + c.User.Login, Activity: activity}})
 			}
 		}
 	}
@@ -314,6 +318,8 @@ func mentionsUser(body, viewer string) bool {
 }
 
 type workflowRun struct {
+	RunAttempt                      int    `json:"run_attempt"`
+	UpdatedAt                       string `json:"updated_at"`
 	ID                              int64
 	Name, Event, Status, Conclusion string
 	HeadBranch                      string                 `json:"head_branch"`
@@ -359,7 +365,7 @@ func fetchDeployment(ctx context.Context, d DeploymentWorkflow) ([]dashboard.Row
 			if r.ID <= 0 {
 				return nil, fmt.Errorf("invalid deployment run ID")
 			}
-			return []dashboard.Row{{ID: d.Repository + "/actions/runs/" + strconv.FormatInt(r.ID, 10), Section: "deployment", Title: r.Name + " (" + d.Branch + ")", Badge: "FAIL", Detail: "Deployment failed / " + d.Branch}}, nil
+			return []dashboard.Row{{ID: d.Repository + "/actions/runs/" + strconv.FormatInt(r.ID, 10), Section: "deployment", Title: r.Name + " (" + d.Branch + ")", Badge: "FAIL", Detail: "Deployment failed / " + d.Branch, Activity: activityToken(r)}}, nil
 		}
 		if len(response.WorkflowRuns) < 20 {
 			return nil, nil

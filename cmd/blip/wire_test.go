@@ -11,7 +11,7 @@ import (
 func TestSnapshotFitsDeviceBufferWithLongCommentTitles(t *testing.T) {
 	s := dashboard.Snapshot{Version: 1, Revision: "test", Rows: make([]dashboard.Row, dashboard.MaxRows)}
 	for i := range s.Rows {
-		s.Rows[i] = dashboard.Row{ID: "ExampleOrg/widget/pull/123456#issuecomment-1234567890", Section: "comment", Title: strings.Repeat("界", 150), Detail: "Comment from ExampleReviewer", Badge: "NEW"}
+		s.Rows[i] = dashboard.Row{ID: "ExampleOrg/widget/pull/123456#issuecomment-1234567890", Section: "comment", Activity: strings.Repeat("a", 32), Title: strings.Repeat("界", 150), Detail: "Comment from ExampleReviewer", Badge: "NEW"}
 	}
 	bounded, wire, err := snapshotWire(s)
 	if err != nil {

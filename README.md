@@ -4,7 +4,8 @@
 TinyGo, a color screen, a clickable knob, and a 3D-printed case.
 
 Turn the knob to select something. Click to open it in your computer’s default
-browser. Swipe the screen to scroll. One dashboard, no pages or menus.
+browser. Hold for one second to snooze it until something changes. Swipe the screen
+to scroll. One dashboard, no pages or menus.
 
 ![A working blip in its teal printed enclosure](docs/images/blip-desk.png)
 

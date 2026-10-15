@@ -6,6 +6,7 @@ import "strings"
 const MaxRows = 60
 
 type Row struct {
+	Activity      string `json:"activity,omitempty"`
 	ChecksRunning bool   `json:"checksRunning,omitempty"`
 	Detail        string `json:"detail,omitempty"`
 	ID            string `json:"id"`
@@ -20,6 +21,7 @@ type Snapshot struct {
 	Rows     []Row  `json:"rows"`
 }
 type Event struct {
+	Activity string `json:"activity,omitempty"`
 	Kind     string `json:"kind"`
 	Revision string `json:"revision,omitempty"`
 	ID       string `json:"id,omitempty"`
@@ -43,7 +45,9 @@ func (s Snapshot) SameContent(next Snapshot) bool {
 		return false
 	}
 	for i, row := range s.Rows {
-		if row != next.Rows[i] {
+		other := next.Rows[i]
+		row.Activity, other.Activity = "", ""
+		if row != other {
 			return false
 		}
 	}

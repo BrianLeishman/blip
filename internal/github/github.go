@@ -27,6 +27,7 @@ type Config struct {
 	RequiredApprovals int                  `json:"required_approvals"`
 }
 type Item struct {
+	HeadRefOid                                              string
 	Number                                                  int
 	Title, URL, ReviewDecision, MergeStateStatus, UpdatedAt string
 	IsDraft                                                 bool
@@ -246,7 +247,7 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 	for _, query := range prQueries(c) {
 		var items []Item
 		var args []string
-		args = []string{"pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", "number,title,url,isDraft,reviewDecision,mergeStateStatus,updatedAt,author,assignees,reviewRequests,labels,statusCheckRollup"}
+		args = []string{"pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", "number,title,url,isDraft,reviewDecision,mergeStateStatus,updatedAt,headRefOid,author,assignees,reviewRequests,labels,statusCheckRollup"}
 		if query.author != "" {
 			args = append(args, "--author", query.author)
 		} else {
@@ -300,7 +301,13 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 
 			// Construct a known GitHub URL instead of accepting arbitrary serial URLs.
 			link := "https://github.com/" + repo + "/" + kind + "/" + strconv.Itoa(item.Number)
-			result.Snapshot.Rows = append(result.Snapshot.Rows, dashboard.Row{ID: id, Section: rowSection, Title: item.Title, Badge: badge, Detail: detail, ChecksRunning: ChecksRunning(item.StatusCheckRollup)})
+			row := dashboard.Row{ID: id, Section: rowSection, Title: item.Title, Badge: badge, Detail: detail, ChecksRunning: ChecksRunning(item.StatusCheckRollup)}
+			row.Activity = activityToken(struct {
+				Item    Item
+				Reviews []Review
+				Row     dashboard.Row
+			}{item, reviews, row})
+			result.Snapshot.Rows = append(result.Snapshot.Rows, row)
 			result.URLs[id] = link
 			updated[id] = item.UpdatedAt
 		}

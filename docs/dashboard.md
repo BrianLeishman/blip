@@ -139,6 +139,26 @@ The CLI login needs access to notifications and Actions in the relevant reposito
 
 Clicking an item only opens its GitHub page. It never merges, approves, or edits.
 
+Hold the knob for one second to **snooze until something changes**. The item hides
+immediately and the companion saves the snooze across restarts. A short click opens
+on release; a long hold never also opens the browser. Turning the knob during a
+press cancels that gesture. The gesture targets the item and activity visible when
+the press was accepted, so a refresh during the hold cannot silently snooze a newer
+update or the next row. Snoozing makes no changes on GitHub.
+
+Snoozes compare source activity, not refresh revisions or animation frames. PRs
+wake for updated comments/activity, new commits, reviews, CI changes or reruns,
+and other queried PR fields. Urgent issues use their update timestamp and queried
+fields; comment alerts use the actual comment content/timestamps; deployments use
+the run result, attempt, and update timestamp. Collection ordering alone does not
+wake anything. Changes become visible on the normal refresh cycle (deployment
+polling still uses its two-minute cache). A snooze ends permanently at the first
+observed change. Temporarily disappearing from the eligible queue doesn't by
+itself end the snooze. Snoozed parents do not reappear as duplicate comment rows.
+
+Snoozes live beside the configuration in an ignored `*.snoozes.local.json` file.
+Delete that file and restart the companion to clear all snoozes manually.
+
 Repositories are fetched with up to four concurrent workers, preserving stable
 row ordering. A new refresh starts 30 seconds after the previous fetch completes. Swipe up/down with light pressure on the resistive touchscreen to scroll the
 list; touch does not open links. The knob still selects and opens items.

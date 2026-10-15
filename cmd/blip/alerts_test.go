@@ -69,3 +69,95 @@ func TestQueuedItemsDoNotProduceDuplicateCommentEntries(t *testing.T) {
 		})
 	}
 }
+
+func TestSnoozeSurvivesRefreshAndRestartUntilSourceChanges(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	state, err := loadAlertState(t.Context(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := dashboard.Row{ID: "Org/widget/pull/7", Activity: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Section: "review", Title: "Example PR"}
+	if err = state.snooze(t.Context(), row); err != nil {
+		t.Fatal(err)
+	}
+	state, err = loadAlertState(t.Context(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot := dashboard.Snapshot{Version: 1, Revision: "new-poll", Rows: []dashboard.Row{row}}
+	if err = state.refresh(t.Context(), snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.filter(snapshot).Rows) != 0 {
+		t.Fatal("poll/restart woke unchanged item")
+	}
+	snapshot.Rows = nil
+	if err = state.refresh(t.Context(), snapshot); err != nil {
+		t.Fatal(err)
+	}
+	snapshot.Rows = []dashboard.Row{row}
+	if len(state.filter(snapshot).Rows) != 0 {
+		t.Fatal("temporary absence woke item")
+	}
+	snapshot.Rows[0].Activity = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	if err = state.refresh(t.Context(), snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.filter(snapshot).Rows) != 1 {
+		t.Fatal("change did not wake item")
+	}
+	state, err = loadAlertState(t.Context(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot.Rows[0] = row
+	if len(state.filter(snapshot).Rows) != 1 {
+		t.Fatal("ended snooze resurrected when state reverted")
+	}
+}
+
+func TestSnoozeUsesPressedActivityNotAnInflightNewerSnapshot(t *testing.T) {
+	state, err := loadAlertState(t.Context(), filepath.Join(t.TempDir(), "config.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := dashboard.Row{ID: "Org/widget/pull/7", Activity: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Section: "review"}
+	newer := old
+	newer.Activity = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	if err = state.snooze(t.Context(), old); err != nil {
+		t.Fatal(err)
+	}
+	snapshot := dashboard.Snapshot{Rows: []dashboard.Row{newer}}
+	if err = state.refresh(t.Context(), snapshot); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.filter(snapshot).Rows) != 1 {
+		t.Fatal("snoozed newer data the user never held")
+	}
+}
+
+func TestSnoozedParentDoesNotReappearAsCommentOrConsumeDisplayLimit(t *testing.T) {
+	state := &alertState{opened: map[string]bool{}, snoozed: map[string]string{"Org/widget/pull/7": "same"}}
+	parent := dashboard.Row{ID: "Org/widget/pull/7", Activity: "same", Section: "review"}
+	comment := dashboard.Row{ID: parent.ID + "#issuecomment-1", Activity: "comment", Section: "comment"}
+	rows := []dashboard.Row{comment}
+	for i := 0; i < dashboard.MaxRows; i++ {
+		rows = append(rows, parent)
+	}
+	rows = append(rows, dashboard.Row{ID: "Org/widget/pull/8", Section: "review"})
+	got := state.filter(dashboard.Snapshot{Rows: rows})
+	if len(got.Rows) != 1 || got.Rows[0].ID != "Org/widget/pull/8" {
+		t.Fatalf("snoozed work resurfaced/displaced other rows: %#v", got.Rows)
+	}
+}
+
+func TestSnoozeTokenValidation(t *testing.T) {
+	for _, s := range []string{"", "abc", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"} {
+		if validActivity(s) {
+			t.Fatalf("accepted invalid token %q", s)
+		}
+	}
+	if !validActivity("0123456789abcdef0123456789abcdef") {
+		t.Fatal("rejected source token")
+	}
+}

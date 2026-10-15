@@ -27,6 +27,7 @@ func TestSnapshotContentChanges(t *testing.T) {
 		{"CI", func(s *Snapshot) { s.Rows[0].Detail = "CI passed" }, false},
 		{"CI starts", func(s *Snapshot) { s.Rows[0].ChecksRunning = true }, false},
 		{"title", func(s *Snapshot) { s.Rows[0].Title = "Renamed" }, false},
+		{"activity", func(s *Snapshot) { s.Rows[0].Activity = "new source activity" }, true},
 		{"section", func(s *Snapshot) { s.Rows[0].Section = "ready" }, false},
 		{"identity", func(s *Snapshot) { s.Rows[0].ID = "c" }, false},
 		{"removed", func(s *Snapshot) { s.Rows = s.Rows[:1] }, false},

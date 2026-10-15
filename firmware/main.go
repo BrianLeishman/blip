@@ -39,6 +39,7 @@ var highlight = color.RGBA{28, 85, 150, 255}
 var rowRenderer display.Renderer
 var previousRows [dashboard.VisibleRows]display.Row
 var rowDrawn [dashboard.VisibleRows]bool
+var snoozeNoticeUntil time.Time
 
 func emit(e dashboard.Event) {
 	b, err := json.Marshal(e)
@@ -147,7 +148,10 @@ func draw() {
 			" / ", " ",
 		).Replace(status)
 	}
-	if encoderError != "" {
+	if time.Now().Before(snoozeNoticeUntil) {
+		identity = ""
+		status = "Snoozed until something changes"
+	} else if encoderError != "" {
 		status = "Encoder: " + encoderError
 	} else if !lastUpdate.IsZero() && time.Since(lastUpdate) > 90*time.Second {
 		status = "STALE DATA"
@@ -263,8 +267,7 @@ func main() {
 	offlineShown := false
 	lastSpinner := time.Now()
 	lastRetry := time.Now()
-	var rawPressed, stablePressed bool
-	changed := time.Now()
+	var knobButton dashboard.Button
 	for {
 		for machine.Serial.Buffered() > 0 {
 			b, e := machine.Serial.ReadByte()
@@ -354,6 +357,7 @@ func main() {
 				continue
 			}
 			if pos != prevPosition {
+				knobButton.Cancel()
 				// This encoder counts down clockwise; clockwise advances the list.
 				delta := prevPosition - pos
 				prevPosition = pos
@@ -366,22 +370,39 @@ func main() {
 				draw()
 			}
 			pressed := binary.BigEndian.Uint32(pins[:])&(1<<24) == 0
-			if pressed != rawPressed {
-				rawPressed = pressed
-				changed = now
+			target := dashboard.Row{}
+			if selected >= 0 && selected < len(snapshot.Rows) {
+				target = snapshot.Rows[selected]
 			}
-			if pressed != stablePressed && now.Sub(changed) > 30*time.Millisecond {
-				stablePressed = pressed
-				if pressed {
-					clicks++
-					if selected >= 0 && selected < len(snapshot.Rows) {
-						emit(dashboard.Event{Kind: "open", Revision: snapshot.Revision, ID: snapshot.Rows[selected].ID})
-					} else {
-						emit(dashboard.Event{Kind: "click"})
+			if action := knobButton.Update(now, pressed, target); action.Kind != "" {
+				clicks++
+				action.Revision = snapshot.Revision
+				emit(action)
+				if action.Kind == "snooze" {
+					// Hide immediately; the companion persists the exact activity token.
+					for i, r := range snapshot.Rows {
+						if r.ID == action.ID && r.Activity == action.Activity {
+							copy(snapshot.Rows[i:], snapshot.Rows[i+1:])
+							snapshot.Rows[len(snapshot.Rows)-1] = dashboard.Row{}
+							snapshot.Rows = snapshot.Rows[:len(snapshot.Rows)-1]
+							if selected >= len(snapshot.Rows) {
+								selected = len(snapshot.Rows) - 1
+							}
+							if selected < 0 {
+								selected = 0
+							}
+							scrollTop = dashboard.ScrollTop(scrollTop, selected, len(snapshot.Rows))
+							break
+						}
 					}
-					draw()
+					snoozeNoticeUntil = now.Add(1500 * time.Millisecond)
 				}
+				draw()
 			}
+		}
+		if !snoozeNoticeUntil.IsZero() && !now.Before(snoozeNoticeUntil) {
+			snoozeNoticeUntil = time.Time{}
+			draw()
 		}
 		if !offlineShown && !lastUpdate.IsZero() && now.Sub(lastUpdate) > 90*time.Second {
 			draw()

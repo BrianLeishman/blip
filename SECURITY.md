@@ -53,6 +53,11 @@ bodies or tokens. Delete the file to reset local acknowledgments. GitHub inbox r
 status remains separate. Deployment workflow names in local config and live LCD
 output may identify private services or brands; keep those local too.
 
+Snoozes are stored separately in ignored `*.snoozes.local.json` files containing
+item IDs and source-activity hashes. Activity hashes also travel to the device so
+a hold can identify the exact update the user saw. These hashes are change
+fingerprints, not authentication credentials. Snoozing only changes local state.
+
 ## Before publishing changes
 
 - Inspect the staged files and Git history, including examples and image metadata.

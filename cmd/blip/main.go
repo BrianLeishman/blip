@@ -53,6 +53,9 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		if err = state.refresh(ctx, r.Snapshot); err != nil {
+			log.Fatal(err)
+		}
 		b, _ := json.MarshalIndent(state.filter(r.Snapshot), "", "  ")
 		fmt.Println(string(b))
 		return
@@ -177,6 +180,7 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 		}()
 	}
 	current := ghdata.Result{URLs: map[string]string{}}
+	var visible dashboard.Snapshot
 	var wire []byte
 	var lastSend, lastFetch time.Time
 	send := func() error {
@@ -202,9 +206,11 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 		return nil
 	}
 	publish := func() error {
-		current.Snapshot = state.filter(current.Snapshot)
+		if current.Snapshot.Version != 1 {
+			return nil
+		}
 		var err error
-		current.Snapshot, wire, err = snapshotWire(current.Snapshot)
+		visible, wire, err = snapshotWire(state.filter(current.Snapshot))
 		if err != nil {
 			return err
 		}
@@ -223,11 +229,14 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 				continue
 			}
 			current = u.result
+			if err := state.refresh(ctx, current.Snapshot); err != nil {
+				log.Printf("Update snoozes: %v", err)
+			}
 			lastFetch = time.Now()
 			if e := publish(); e != nil {
 				return e
 			}
-			log.Printf("Dashboard refreshed: %d rows", len(current.Snapshot.Rows))
+			log.Printf("Dashboard refreshed: %d rows", len(visible.Rows))
 		case e := <-events:
 			switch e.Kind {
 			case "hello":
@@ -254,6 +263,24 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 				if probe {
 					log.Printf("%s position=%d", e.Kind, e.Position)
 				}
+			case "snooze":
+				if _, ok := openTarget(e); !ok || !validActivity(e.Activity) {
+					log.Print("Ignored malformed snooze")
+					continue
+				}
+				if err := state.snooze(ctx, dashboard.Row{ID: e.ID, Activity: e.Activity}); err != nil {
+					log.Printf("Save snooze: %v", err)
+					continue
+				}
+				// Use the exact activity the user held, never silently snooze a newer update.
+				if err := state.refresh(ctx, current.Snapshot); err != nil {
+					log.Printf("Update snoozes: %v", err)
+				}
+				current.Snapshot.Revision = fmt.Sprintf("%d", time.Now().UnixNano())
+				if err := publish(); err != nil {
+					return err
+				}
+				log.Printf("Snoozed %s until activity changes", e.ID)
 			case "open":
 				link, ok := openTarget(e)
 				if !ok {
