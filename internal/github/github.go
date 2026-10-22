@@ -47,6 +47,11 @@ type Result struct {
 	URLs     map[string]string
 }
 
+type reviewOrder struct {
+	approvals int
+	updatedAt string
+}
+
 func gh(ctx context.Context, dst any, args ...string) error {
 	cmd := exec.CommandContext(ctx, "gh", args...)
 	b, err := cmd.Output()
@@ -165,15 +170,15 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 	if err != nil {
 		return result, err
 	}
-	updated := map[string]string{}
+	order := map[string]reviewOrder{}
 	// Fetch up to four repositories concurrently; collect in input order so
 	// network completion order never reshuffles the display.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	type repoResult struct {
-		result  Result
-		updated map[string]string
-		err     error
+		result Result
+		order  map[string]reviewOrder
+		err    error
 	}
 	results := make([]repoResult, len(repositories))
 	slots := make(chan struct{}, 4)
@@ -189,7 +194,7 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 				results[i].err = ctx.Err()
 				return
 			}
-			results[i].result, results[i].updated, results[i].err = fetchRepository(ctx, c, repo, viewer.Login)
+			results[i].result, results[i].order, results[i].err = fetchRepository(ctx, c, repo, viewer.Login)
 		}()
 	}
 	workers.Wait()
@@ -201,8 +206,8 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 		for id, link := range r.result.URLs {
 			result.URLs[id] = link
 		}
-		for id, at := range r.updated {
-			updated[id] = at
+		for id, priority := range r.order {
+			order[id] = priority
 		}
 	}
 
@@ -230,7 +235,11 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 	sort.SliceStable(result.Snapshot.Rows, func(i, j int) bool {
 		a, b := result.Snapshot.Rows[i], result.Snapshot.Rows[j]
 		if a.Section == "review" && b.Section == "review" {
-			return updated[a.ID] < updated[b.ID]
+			x, y := order[a.ID], order[b.ID]
+			if x.approvals != y.approvals {
+				return x.approvals > y.approvals
+			}
+			return x.updatedAt < y.updatedAt
 		}
 		return rank[a.Section] < rank[b.Section]
 	})
@@ -241,9 +250,9 @@ func SafeURL(raw string) bool {
 	return err == nil && u.Scheme == "https" && u.Host == "github.com" && u.User == nil
 }
 
-func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]string, error) {
+func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]reviewOrder, error) {
 	result := Result{URLs: map[string]string{}}
-	updated := map[string]string{}
+	order := map[string]reviewOrder{}
 	for _, query := range prQueries(c) {
 		var items []Item
 		var args []string
@@ -255,7 +264,7 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 		}
 
 		if err := gh(ctx, &items, args...); err != nil {
-			return result, updated, fmt.Errorf("%s %s author=%q: %w", repo, query.section, query.author, err)
+			return result, order, fmt.Errorf("%s %s author=%q: %w", repo, query.section, query.author, err)
 		}
 		for _, item := range items {
 			id := repo + "/pull/" + strconv.Itoa(item.Number)
@@ -276,7 +285,7 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 			}
 			var pages [][]Review
 			if err := gh(ctx, &pages, "api", "--paginate", "--slurp", fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number)); err != nil {
-				return result, updated, err
+				return result, order, err
 			}
 			var reviews []Review
 			for _, page := range pages {
@@ -309,10 +318,10 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 			}{item, reviews, row})
 			result.Snapshot.Rows = append(result.Snapshot.Rows, row)
 			result.URLs[id] = link
-			updated[id] = item.UpdatedAt
+			order[id] = reviewOrder{approvals: n, updatedAt: item.UpdatedAt}
 		}
 	}
-	return result, updated, nil
+	return result, order, nil
 }
 
 func (item Item) ownedBy(viewer string, c Config) bool {

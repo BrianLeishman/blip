@@ -111,8 +111,9 @@ The CLI login needs access to notifications and Actions in the relevant reposito
   to clear the highlight and stop title scrolling; turn back to select again.
   Refreshes preserve that unselected state, and clicking it opens nothing. A successful
   LGTM-label workflow does not itself count as the LGTM label.
-- **R / Review:** `is:open -is:draft review-requested:@me`, sorted by **least
-  recently updated**, with fewer than the configured number of approvals.
+- **R / Review:** `is:open -is:draft review-requested:@me`, sorted by **most
+  approvals first**, then **least recently updated** within each approval count,
+  with fewer than the configured number of approvals.
   PRs with merge conflicts are hidden until the conflict is resolved. Your own,
   eligible Dependabot, and additional-author PRs keep their conflict status visible
   in Mine.

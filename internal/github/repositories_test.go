@@ -87,6 +87,52 @@ func TestOwnerConfiguration(t *testing.T) {
 	}
 }
 
+func TestReviewQueuePrioritizesApprovalsAcrossRepositories(t *testing.T) {
+	fakeAlertsGH(t, `case "$*" in
+ "api user") echo '{"login":"Viewer"}' ;;
+ "repo view "*) echo '{"isArchived":false}' ;;
+ "pr list --repo Org/a "*"--author @me") echo '[{"number":7,"title":"Own PR"}]' ;;
+ "pr list "*"--author @me") echo '[]' ;;
+ "pr list --repo Org/a "*) echo '[
+   {"number":1,"title":"Old unreviewed PR","updatedAt":"2026-01-01T00:00:00Z"},
+   {"number":2,"title":"Recently approved PR","updatedAt":"2026-10-22T00:00:00Z"},
+   {"number":3,"title":"Earlier approved PR","updatedAt":"2026-10-21T00:00:00Z"}
+ ]' ;;
+ "pr list --repo Org/b "*) echo '[
+   {"number":4,"title":"Oldest approved PR","updatedAt":"2026-10-20T00:00:00Z"},
+   {"number":5,"title":"Other unreviewed PR","updatedAt":"2026-01-02T00:00:00Z"},
+   {"number":6,"title":"Two approvals","updatedAt":"2026-10-23T00:00:00Z"},
+   {"number":8,"title":"Tied approved PR","updatedAt":"2026-10-21T00:00:00Z"}
+ ]' ;;
+ "api "*"/pulls/6/reviews?per_page=100") echo '[[
+   {"user":{"login":"Reviewer1"},"state":"APPROVED"},
+   {"user":{"login":"Reviewer2"},"state":"APPROVED"}
+ ]]' ;;
+ "api "*"/pulls/2/reviews?per_page=100"|"api "*"/pulls/3/reviews?per_page=100"|"api "*"/pulls/4/reviews?per_page=100"|"api "*"/pulls/8/reviews?per_page=100")
+   echo '[[{"user":{"login":"Reviewer1"},"state":"APPROVED"}]]' ;;
+ "api "*"/reviews?per_page=100") echo '[[]]' ;;
+ *) exit 1 ;;
+esac`)
+	for _, required := range []int{2, 3} {
+		result, err := Fetch(t.Context(), Config{Repositories: []string{"Org/a", "Org/b"}, RequiredApprovals: required})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"Org/a/pull/7"}
+		if required == 3 {
+			want = append(want, "Org/b/pull/6")
+		}
+		want = append(want, "Org/b/pull/4", "Org/a/pull/3", "Org/b/pull/8", "Org/a/pull/2", "Org/a/pull/1", "Org/b/pull/5")
+		var got []string
+		for _, row := range result.Snapshot.Rows {
+			got = append(got, row.ID)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("required=%d: got %v, want %v", required, got, want)
+		}
+	}
+}
+
 func TestFetchMultipleReposKeepsOpenTargetsAndDeduplicatesSharedAuthorReviews(t *testing.T) {
 	dir := t.TempDir()
 	script := `#!/bin/sh

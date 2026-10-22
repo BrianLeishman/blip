@@ -18,7 +18,8 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
   merge conflicts keeping them out of the ready queue. Pending CI is shown with
   a spinner and can still appear here.
 - **Mine:** your other PRs, with approval counts, LGTM labels, and CI status.
-- **Review:** open, non-draft PRs requesting your review, oldest updated first,
+- **Review:** open, non-draft PRs requesting your review, most approvals first
+  and then oldest updated first,
   while they still have fewer than the configured number of approvals. PRs with
   running or failing CI, or merge conflicts, stay hidden until resolved.
 - **Urgent:** optional GitHub issue Priority filtering, excluding blocked work.
