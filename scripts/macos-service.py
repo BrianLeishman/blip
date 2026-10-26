@@ -28,7 +28,7 @@ agent.parent.mkdir(parents=True, exist_ok=True)
 subprocess.run(['launchctl', 'bootout', domain + '/' + label], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
 config = {
     'Label': label,
-    'ProgramArguments': [str(root / 'build/blip'), '-config', str(root / 'blip.local.json')],
+    'ProgramArguments': [str(root / 'build/blip'), '-config', str(root / 'blip.local.json'), '-interval', '2m'],
     'WorkingDirectory': str(root),
     'EnvironmentVariables': {'PATH': os.environ['PATH']},
     'RunAtLoad': True,
