@@ -9,10 +9,16 @@ import (
 	"time"
 )
 
+const ghOK = `ok() {
+  printf 'HTTP/2.0 200 OK\r\nEtag: "x"\r\n\r\n'
+  printf '%s\n' "$1"
+}
+`
+
 func fakeAlertsGH(t *testing.T, script string) {
 	t.Helper()
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "gh"), []byte("#!/bin/sh\n"+script), 0755); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "gh"), []byte("#!/bin/sh\n"+ghOK+script), 0755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir)
@@ -23,11 +29,11 @@ func TestUnreadHumanCommentsAndCache(t *testing.T) {
 	t.Setenv("CALLS", log)
 	fakeAlertsGH(t, `echo "$*" >> "$CALLS"
 case "$*" in
- "api repos/Org/widget/pulls/7") echo "$PR" ;;
- *notifications\?*) echo "$THREADS" ;;
- *issues/7/comments*) echo '[[{"id":1,"body":"old","created_at":"2026-10-05T09:00:00Z","user":{"login":"Old"}},{"id":2,"body":"seen","created_at":"2026-10-05T10:30:00Z","user":{"login":"Seen"}},{"id":3,"body":"self","created_at":"2026-10-05T12:30:00Z","user":{"login":"viewer"}},{"id":4,"body":"bot","created_at":"2026-10-05T14:30:00Z","user":{"login":"automation","type":"Bot"}},{"id":5,"body":"human","created_at":"2026-10-05T11:30:00Z","user":{"login":"Teammate"}}]]' ;;
- *pulls/7/comments*) echo '[[{"id":6,"body":"inline","created_at":"2026-10-05T12:00:00Z","user":{"login":"Reviewer"}},{"id":8,"body":"bot","created_at":"2026-10-05T16:00:00Z","user":{"login":"app[bot]"}}]]' ;;
- *pulls/7/reviews*) echo '[[{"id":7,"body":"","submitted_at":"2026-10-05T15:00:00Z","user":{"login":"Approver"}}]]' ;;
+ *repos/Org/widget/pulls/7) ok "$PR" ;;
+ *notifications\?*) ok "$THREADS" ;;
+ *issues/7/comments*) ok '[{"id":1,"body":"old","created_at":"2026-10-05T09:00:00Z","user":{"login":"Old"}},{"id":2,"body":"seen","created_at":"2026-10-05T10:30:00Z","user":{"login":"Seen"}},{"id":3,"body":"self","created_at":"2026-10-05T12:30:00Z","user":{"login":"viewer"}},{"id":4,"body":"bot","created_at":"2026-10-05T14:30:00Z","user":{"login":"automation","type":"Bot"}},{"id":5,"body":"human","created_at":"2026-10-05T11:30:00Z","user":{"login":"Teammate"}}]' ;;
+ *pulls/7/comments*) ok '[{"id":6,"body":"inline","created_at":"2026-10-05T12:00:00Z","user":{"login":"Reviewer"}},{"id":8,"body":"bot","created_at":"2026-10-05T16:00:00Z","user":{"login":"app[bot]"}}]' ;;
+ *pulls/7/reviews*) ok '[{"id":7,"body":"","submitted_at":"2026-10-05T15:00:00Z","user":{"login":"Approver"}}]' ;;
  *) exit 1 ;;
 esac
 `)
@@ -38,7 +44,7 @@ esac
 	thread.Subject.Title = "Example change"
 	thread.Subject.URL = "https://api.github.com/repos/Org/widget/pulls/7"
 	setThreads := func(ns []notification) {
-		b, err := json.Marshal([][]notification{ns})
+		b, err := json.Marshal(ns)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -135,14 +141,14 @@ func TestDeploymentRecoveryAndExclusionOfPRRuns(t *testing.T) {
 		{"manual recovery", workflowRun{ID: 11, Event: "workflow_dispatch", Status: "completed", Conclusion: "success", HeadBranch: "main"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fakeAlertsGH(t, `echo "$RUNS"`)
+			fakeAlertsGH(t, `ok "$RUNS"`)
 			tc.newer.CreatedAt = "2026-10-05T12:00:00Z"
 			b, err := json.Marshal(map[string]any{"workflow_runs": []workflowRun{failure, tc.newer}})
 			if err != nil {
 				t.Fatal(err)
 			}
 			t.Setenv("RUNS", string(b))
-			rows, err := fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
+			rows, err := NewClient(Config{}).fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -157,8 +163,8 @@ func TestDeploymentRecoveryAndExclusionOfPRRuns(t *testing.T) {
 }
 
 func TestDeploymentDoesNotAlertForPRFailuresAlone(t *testing.T) {
-	fakeAlertsGH(t, `echo '{"workflow_runs":[{"id":11,"event":"pull_request","status":"completed","conclusion":"failure","head_branch":"main"}]}'`)
-	rows, err := fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
+	fakeAlertsGH(t, `ok '{"workflow_runs":[{"id":11,"event":"pull_request","status":"completed","conclusion":"failure","head_branch":"main"}]}'`)
+	rows, err := NewClient(Config{}).fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("PR failure leaked: %#v %v", rows, err)
 	}
@@ -188,7 +194,7 @@ func TestDeploymentPollingCache(t *testing.T) {
 	fakeAlertsGH(t, `echo "$*" >> "$CALLS"
 case "$*" in
  "repo view "*) echo '{"isArchived":false}' ;;
- *) echo "$RUNS" ;;
+ *) ok "$RUNS" ;;
 esac
 `)
 	d := DeploymentWorkflow{"Org/widget", "deploy.yml", "main"}
@@ -234,9 +240,9 @@ func TestPRCommentsRequireParticipationOrDirectMention(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeAlertsGH(t, `case "$*" in
- *issues/7/comments*) echo "$COMMENTS" ;;
- *pulls/7/comments*) echo '[[]]' ;;
- *pulls/7/reviews*) echo "$REVIEWS" ;;
+ *issues/7/comments*) ok "$COMMENTS" ;;
+ *pulls/7/comments*) ok '[]' ;;
+ *pulls/7/reviews*) ok "$REVIEWS" ;;
  *) exit 1 ;;
 esac
 `)
@@ -248,19 +254,19 @@ esac
 			latest := comment{ID: 3, Body: tc.body, CreatedAt: "2026-10-05T12:00:00Z"}
 			latest.User.Login = "Author"
 			comments = append(comments, latest)
-			b, err := json.Marshal([][]comment{comments})
+			b, err := json.Marshal(comments)
 			if err != nil {
 				t.Fatal(err)
 			}
 			t.Setenv("COMMENTS", string(b))
-			t.Setenv("REVIEWS", "["+tc.reviews+"]")
+			t.Setenv("REVIEWS", tc.reviews)
 			n := notification{Reason: "mention"} // Old mention reason alone must not bypass participation.
 			n.Repository.FullName = "Org/widget"
 			n.Subject.Type = "PullRequest"
 			n.Subject.URL = "https://api.github.com/repos/Org/widget/pulls/7"
 			pr := commentPR{}
 			pr.User.Login = tc.author
-			rows, err := fetchThreadComments(t.Context(), n, "Viewer", "2026-10-05T00:00:00Z", pr)
+			rows, err := NewClient(Config{}).fetchThreadComments(t.Context(), n, "Viewer", "2026-10-05T00:00:00Z", pr)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -284,11 +290,11 @@ func TestCancelledDeploymentsNeverAlertOrResurrectOlderFailures(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeAlertsGH(t, `case "$*" in
  *branch=*|*status=*|*created=*) exit 1 ;;
- *) echo "$RUNS" ;;
+ *) ok "$RUNS" ;;
 esac
 `)
 			t.Setenv("RUNS", `{"workflow_runs":`+tc.runs+`}`)
-			rows, err := fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
+			rows, err := NewClient(Config{}).fetchDeployment(t.Context(), DeploymentWorkflow{"Org/widget", "deploy.yml", "main"})
 			if err != nil {
 				t.Fatal(err)
 			}

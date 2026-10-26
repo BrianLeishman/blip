@@ -109,13 +109,11 @@ func positiveNumber(s string) bool {
 func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboard.Row, error) {
 	var threads []notification
 	if client.config.CommentsSince != "" {
-		var pages [][]notification
 		endpoint := "notifications?per_page=100&since=" + url.QueryEscape(client.config.CommentsSince)
-		if err := gh(ctx, &pages, "api", "--paginate", "--slurp", endpoint); err != nil {
+		var err error
+		threads, err = restAll[notification](ctx, client, endpoint)
+		if err != nil {
 			return nil, fmt.Errorf("comment notifications: %w", err)
-		}
-		for _, page := range pages {
-			threads = append(threads, page...)
 		}
 	}
 	// Both types of alert use bounded concurrency, including comment detail calls.
@@ -137,7 +135,7 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 				}
 				// Draft changes need not create a notification. Check current PR state
 				// even when its comment contents are already cached.
-				if err := gh(ctx, &pr, "api", path); err != nil {
+				if err := client.restJSON(ctx, &pr, path); err != nil {
 					return nil, err
 				}
 				if pr.Draft {
@@ -155,7 +153,7 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 			if ok && cached.signature == signature {
 				return cached.rows, nil
 			}
-			rows, err := fetchThreadComments(ctx, n, viewer, client.config.CommentsSince, pr)
+			rows, err := client.fetchThreadComments(ctx, n, viewer, client.config.CommentsSince, pr)
 			if err == nil {
 				cacheMu.Lock()
 				client.comments[n.ID] = cachedComments{signature, rows}
@@ -189,7 +187,7 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 			if ok && time.Since(cached.at) < 2*time.Minute {
 				return cached.rows, nil
 			}
-			rows, err := fetchDeployment(ctx, d)
+			rows, err := client.fetchDeployment(ctx, d)
 			if err == nil {
 				cacheMu.Lock()
 				client.deployments[d] = cachedDeployment{time.Now(), rows}
@@ -233,7 +231,7 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 	return rows, nil
 }
 
-func fetchThreadComments(ctx context.Context, n notification, viewer, since string, pr commentPR) ([]dashboard.Row, error) {
+func (client *Client) fetchThreadComments(ctx context.Context, n notification, viewer, since string, pr commentPR) ([]dashboard.Row, error) {
 	kind := "issues"
 	browserKind := "issues"
 	if n.Subject.Type == "PullRequest" {
@@ -263,37 +261,35 @@ func fetchThreadComments(ctx context.Context, n notification, viewer, since stri
 	participated := strings.EqualFold(pr.User.Login, viewer)
 	mentioned := false
 	for _, s := range sources {
-		var pages [][]comment
-		if err := gh(ctx, &pages, "api", "--paginate", "--slurp", "repos/"+n.Repository.FullName+"/"+s.path); err != nil {
+		comments, err := restAll[comment](ctx, client, "repos/"+n.Repository.FullName+"/"+s.path)
+		if err != nil {
 			return nil, fmt.Errorf("notification comments: %w", err)
 		}
-		for _, page := range pages {
-			for _, c := range page {
-				stamp := c.CreatedAt
-				if c.SubmittedAt != "" {
-					stamp = c.SubmittedAt
-				}
-				at, err := time.Parse(time.RFC3339, stamp)
-				if err == nil && strings.EqualFold(c.User.Login, viewer) {
-					participated = true
-				}
-				if err != nil || !at.After(floor) || c.ID <= 0 || strings.TrimSpace(c.Body) == "" || strings.EqualFold(c.User.Login, viewer) || c.User.Type == "Bot" || strings.HasSuffix(strings.ToLower(c.User.Login), "[bot]") {
-					continue
-				}
-				mentioned = mentioned || mentionsUser(c.Body, viewer)
-				// One row per unread thread: click the latest actual human comment, not a
-				// notification's sometimes-placeholder latest_comment_url.
-				badge := "NEW"
-				if n.Reason == "mention" {
-					badge = "@YOU"
-				}
-				id := n.Repository.FullName + "/" + browserKind + "/" + number + "#" + s.anchor + strconv.FormatInt(c.ID, 10)
-				activity := activityToken(struct {
-					Comment comment
-					Title   string
-				}{c, n.Subject.Title})
-				dated = append(dated, datedRow{at, dashboard.Row{ID: id, Section: "comment", Title: c.User.Login + ": " + n.Subject.Title, Badge: badge, Detail: "Comment from " + c.User.Login, Activity: activity}})
+		for _, c := range comments {
+			stamp := c.CreatedAt
+			if c.SubmittedAt != "" {
+				stamp = c.SubmittedAt
 			}
+			at, err := time.Parse(time.RFC3339, stamp)
+			if err == nil && strings.EqualFold(c.User.Login, viewer) {
+				participated = true
+			}
+			if err != nil || !at.After(floor) || c.ID <= 0 || strings.TrimSpace(c.Body) == "" || strings.EqualFold(c.User.Login, viewer) || c.User.Type == "Bot" || strings.HasSuffix(strings.ToLower(c.User.Login), "[bot]") {
+				continue
+			}
+			mentioned = mentioned || mentionsUser(c.Body, viewer)
+			// One row per unread thread: click the latest actual human comment, not a
+			// notification's sometimes-placeholder latest_comment_url.
+			badge := "NEW"
+			if n.Reason == "mention" {
+				badge = "@YOU"
+			}
+			id := n.Repository.FullName + "/" + browserKind + "/" + number + "#" + s.anchor + strconv.FormatInt(c.ID, 10)
+			activity := activityToken(struct {
+				Comment comment
+				Title   string
+			}{c, n.Subject.Title})
+			dated = append(dated, datedRow{at, dashboard.Row{ID: id, Section: "comment", Title: c.User.Login + ": " + n.Subject.Title, Badge: badge, Detail: "Comment from " + c.User.Login, Activity: activity}})
 		}
 	}
 	if kind == "pulls" && !participated && !mentioned {
@@ -343,7 +339,7 @@ func eligibleDeployment(run workflowRun, branch string) bool {
 	return false
 }
 
-func fetchDeployment(ctx context.Context, d DeploymentWorkflow) ([]dashboard.Row, error) {
+func (client *Client) fetchDeployment(ctx context.Context, d DeploymentWorkflow) ([]dashboard.Row, error) {
 	// Read the latest unfiltered history, then apply branch/event/outcome rules
 	// locally. Filtered searches can return older subsets of a busy workflow.
 	base := "repos/" + d.Repository + "/actions/workflows/" + url.PathEscape(d.Workflow) + "/runs?per_page=20"
@@ -351,7 +347,7 @@ func fetchDeployment(ctx context.Context, d DeploymentWorkflow) ([]dashboard.Row
 		var response struct {
 			WorkflowRuns []workflowRun `json:"workflow_runs"`
 		}
-		if err := gh(ctx, &response, "api", base+"&page="+strconv.Itoa(page)); err != nil {
+		if err := client.restJSON(ctx, &response, base+"&page="+strconv.Itoa(page)); err != nil {
 			return nil, fmt.Errorf("deployment workflow: %w", err)
 		}
 		sort.SliceStable(response.WorkflowRuns, func(i, j int) bool { return response.WorkflowRuns[i].CreatedAt > response.WorkflowRuns[j].CreatedAt })

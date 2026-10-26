@@ -85,6 +85,10 @@ names, and no blanket list of failed Actions runs. Archived repositories are ski
   refresh error. This observes workflow outcomes, not actual service health.
   Deployment results are cached for two minutes between polling cycles to limit
   Actions API traffic; browser opening and comment dismissal remain immediate.
+  REST reads (notifications, PR reviews, comments, workflow runs, the viewer)
+  are conditional requests that send the previous response's ETag. GitHub answers
+  unchanged data with 304, which does not count against the API rate limit, so a
+  quiet refresh costs few calls.
 
 The companion uses GitHub's [notification API](https://docs.github.com/en/rest/activity/notifications)
 and [workflow-run API](https://docs.github.com/en/rest/actions/workflow-runs).

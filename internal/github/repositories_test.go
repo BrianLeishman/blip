@@ -12,9 +12,9 @@ import (
 func TestDiscoverOwnerRepositories(t *testing.T) {
 	dir := t.TempDir()
 	script := `#!/bin/sh
-case "$*" in
+` + ghOK + `case "$*" in
  "repo view Other/archived --json isArchived") echo '{"isArchived":true}'; exit 0 ;;
- "api user") echo '{"login":"BrianLeishman"}' ;;
+ api\ -i\ user|api\ -i\ -H\ *\ user) ok '{"login":"BrianLeishman"}' ;;
  "repo view "*) echo '{"isArchived":false}'; exit 0 ;;
 esac
 case "$*" in
@@ -89,7 +89,7 @@ func TestOwnerConfiguration(t *testing.T) {
 
 func TestReviewQueuePrioritizesApprovalsAcrossRepositories(t *testing.T) {
 	fakeAlertsGH(t, `case "$*" in
- "api user") echo '{"login":"Viewer"}' ;;
+ api\ -i\ user|api\ -i\ -H\ *\ user) ok '{"login":"Viewer"}' ;;
  "repo view "*) echo '{"isArchived":false}' ;;
  "pr list --repo Org/a "*"--author @me") echo '[{"number":7,"title":"Own PR"}]' ;;
  "pr list "*"--author @me") echo '[]' ;;
@@ -104,13 +104,13 @@ func TestReviewQueuePrioritizesApprovalsAcrossRepositories(t *testing.T) {
    {"number":6,"title":"Two approvals","updatedAt":"2026-10-23T00:00:00Z"},
    {"number":8,"title":"Tied approved PR","updatedAt":"2026-10-21T00:00:00Z"}
  ]' ;;
- "api "*"/pulls/6/reviews?per_page=100") echo '[[
+ "api "*"/pulls/6/reviews?per_page=100") ok '[
    {"user":{"login":"Reviewer1"},"state":"APPROVED"},
    {"user":{"login":"Reviewer2"},"state":"APPROVED"}
- ]]' ;;
+ ]' ;;
  "api "*"/pulls/2/reviews?per_page=100"|"api "*"/pulls/3/reviews?per_page=100"|"api "*"/pulls/4/reviews?per_page=100"|"api "*"/pulls/8/reviews?per_page=100")
-   echo '[[{"user":{"login":"Reviewer1"},"state":"APPROVED"}]]' ;;
- "api "*"/reviews?per_page=100") echo '[[]]' ;;
+   ok '[{"user":{"login":"Reviewer1"},"state":"APPROVED"}]' ;;
+ "api "*"/reviews?per_page=100") ok '[]' ;;
  *) exit 1 ;;
 esac`)
 	for _, required := range []int{2, 3} {
@@ -136,14 +136,14 @@ esac`)
 func TestFetchMultipleReposKeepsOpenTargetsAndDeduplicatesSharedAuthorReviews(t *testing.T) {
 	dir := t.TempDir()
 	script := `#!/bin/sh
-case "$*" in
- "api user") echo '{"login":"BrianLeishman"}' ;;
+` + ghOK + `case "$*" in
+ api\ -i\ user|api\ -i\ -H\ *\ user) ok '{"login":"BrianLeishman"}' ;;
  "repo view "*) echo '{"isArchived":false}' ;;
  "pr list "*"--author @me") echo '[{"number":1,"title":"Own PR"}]' ;;
  "pr list "*"--author dependabot[bot]") echo '[{"number":2,"title":"Bot PR"}]' ;;
  "pr list "*"--author ExtraUser") echo '[{"number":5,"title":"Additional author PR","author":{"login":"ExtraUser"}},{"number":6,"title":"Awaiting review","author":{"login":"ExtraUser"},"reviewRequests":[{"login":"Reviewer"}]},{"number":7,"title":"Assigned elsewhere","author":{"login":"ExtraUser"},"assignees":[{"login":"OtherReviewer"}]},{"number":8,"title":"Assigned to viewer","author":{"login":"ExtraUser"},"assignees":[{"login":"BrianLeishman"}]},{"number":9,"title":"Draft","author":{"login":"ExtraUser"},"isDraft":true}]' ;;
  "pr list "*) echo '[{"number":2,"title":"Bot PR"},{"number":3,"title":"Review PR"},{"number":5,"title":"Additional author PR","author":{"login":"ExtraUser"}},{"number":6,"title":"Awaiting review","author":{"login":"ExtraUser"},"reviewRequests":[{"login":"Reviewer"}]},{"number":7,"title":"Assigned elsewhere","author":{"login":"ExtraUser"},"assignees":[{"login":"OtherReviewer"}]},{"number":4,"title":"Assigned bot PR","author":{"login":"app/dependabot"},"assignees":[{"login":"OtherReviewer"}]}]' ;;
- "api "*) echo '[[]]' ;;
+ "api "*) ok '[]' ;;
  *) exit 1 ;;
 esac
 `
@@ -218,12 +218,12 @@ func TestReviewQueueHidesUnreadyCIWithoutHidingOwnedPRs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
 			script := `#!/bin/sh
-case "$*" in
+` + ghOK + `case "$*" in
  "pr list "*"--author @me") echo "$OWN_PR" ;;
  "pr list "*"--author dependabot[bot]") echo "$BOT_PR" ;;
  "pr list "*"--author ExtraUser") echo "$EXTRA_PR" ;;
  "pr list "*) echo "$REVIEW_PR" ;;
- "api "*) echo '[[]]' ;;
+ "api "*) ok '[]' ;;
  *) exit 1 ;;
 esac
 `
@@ -238,7 +238,8 @@ esac
 				}
 				t.Setenv(name, string(b))
 			}
-			result, _, err := fetchRepository(t.Context(), Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}, RequiredApprovals: 2}, "Org/example", "Viewer")
+			cfg := Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}, RequiredApprovals: 2}
+			result, _, err := NewClient(cfg).fetchRepository(t.Context(), cfg, "Org/example", "Viewer")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -267,11 +268,12 @@ func TestConflictsHiddenFromReviewButRetainedForOwnedAuthors(t *testing.T) {
  "pr list "*"--author ExtraUser") echo '[{"number":3,"mergeStateStatus":"DIRTY"}]' ;;
  "pr list "*) echo '[{"number":4,"mergeStateStatus":"DIRTY"},{"number":5,"mergeStateStatus":"BLOCKED"},{"number":6,"mergeStateStatus":"BEHIND"},{"number":7,"mergeStateStatus":"UNKNOWN"}]' ;;
  *pulls/4/reviews*) exit 1 ;;
- "api "*) echo '[[]]' ;;
+ "api "*) ok '[]' ;;
  *) exit 1 ;;
 esac
 `)
-	result, _, err := fetchRepository(t.Context(), Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}, RequiredApprovals: 2}, "Org/widget", "Viewer")
+	cfg := Config{IncludeDependabot: true, AdditionalAuthors: []string{"ExtraUser"}, RequiredApprovals: 2}
+	result, _, err := NewClient(cfg).fetchRepository(t.Context(), cfg, "Org/widget", "Viewer")
 	if err != nil {
 		t.Fatal(err)
 	}

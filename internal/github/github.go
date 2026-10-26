@@ -143,10 +143,17 @@ type Client struct {
 	config      Config
 	comments    map[string]cachedComments
 	deployments map[DeploymentWorkflow]cachedDeployment
+	restMu      sync.Mutex
+	rest        map[string]cachedREST
 }
 
 func NewClient(c Config) *Client {
-	return &Client{config: c, comments: map[string]cachedComments{}, deployments: map[DeploymentWorkflow]cachedDeployment{}}
+	return &Client{
+		config:      c,
+		comments:    map[string]cachedComments{},
+		deployments: map[DeploymentWorkflow]cachedDeployment{},
+		rest:        map[string]cachedREST{},
+	}
 }
 
 func Fetch(ctx context.Context, c Config) (Result, error) {
@@ -160,7 +167,7 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 		return result, err
 	}
 	var viewer struct{ Login string }
-	if err := gh(ctx, &viewer, "api", "user"); err != nil {
+	if err := client.restJSON(ctx, &viewer, "user"); err != nil {
 		return result, err
 	}
 	if viewer.Login == "" {
@@ -194,7 +201,7 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 				results[i].err = ctx.Err()
 				return
 			}
-			results[i].result, results[i].order, results[i].err = fetchRepository(ctx, c, repo, viewer.Login)
+			results[i].result, results[i].order, results[i].err = client.fetchRepository(ctx, c, repo, viewer.Login)
 		}()
 	}
 	workers.Wait()
@@ -250,7 +257,7 @@ func SafeURL(raw string) bool {
 	return err == nil && u.Scheme == "https" && u.Host == "github.com" && u.User == nil
 }
 
-func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]reviewOrder, error) {
+func (client *Client) fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]reviewOrder, error) {
 	result := Result{URLs: map[string]string{}}
 	order := map[string]reviewOrder{}
 	for _, query := range prQueries(c) {
@@ -283,16 +290,14 @@ func fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result
 					continue
 				}
 			}
-			var pages [][]Review
-			if err := gh(ctx, &pages, "api", "--paginate", "--slurp", fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number)); err != nil {
+			all, err := restAll[Review](ctx, client, fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number))
+			if err != nil {
 				return result, order, err
 			}
 			var reviews []Review
-			for _, page := range pages {
-				for _, r := range page {
-					if r.User.Login != item.Author.Login {
-						reviews = append(reviews, r)
-					}
+			for _, r := range all {
+				if r.User.Login != item.Author.Login {
+					reviews = append(reviews, r)
 				}
 			}
 			n := Approvals(reviews)
