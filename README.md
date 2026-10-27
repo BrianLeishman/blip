@@ -23,6 +23,8 @@ and background monitors are blanked. [Image provenance](docs/images/README.md).*
   while they still have fewer than the configured number of approvals. PRs with
   running or failing CI, or merge conflicts, stay hidden until resolved.
 - **Urgent:** optional GitHub issue Priority filtering, excluding blocked work.
+- **Experimental video:** swipe right to mirror Firefox Picture-in-Picture over
+  USB; swipe left or click the knob to return. [Setup and limitations](docs/video.md).
 - **Across repositories:** discover relevant PRs across configured organizations
   and personal accounts; skip archived repositories.
 - **Extra authors:** optionally treat Dependabot and configured GitHub accounts
@@ -92,7 +94,8 @@ explains the orientation and optional connections.
 ## Get it running
 
 Requires Go matching [go.mod](go.mod) (currently 1.26.6+), TinyGo 0.42+, and the
-GitHub CLI. Python 3 is only needed for the optional macOS service installer and
+GitHub CLI. The optional video capture helper needs macOS 14+ and Apple Command
+Line Tools (`swiftc`). Python 3 is only needed for the optional macOS service installer and
 CAD utilities; OpenSCAD is needed to regenerate the printed parts.
 
 ```sh

@@ -22,6 +22,10 @@ if not (root / 'blip.local.json').exists():
 if not shutil.which('gh'):
     raise SystemExit('Install gh and run gh auth login first.')
 subprocess.run(['go', 'build', '-o', str(root / 'build/blip'), './cmd/blip'], cwd=root, check=True)
+if shutil.which('swiftc'):
+    subprocess.run(['make', 'capture-helper'], cwd=root, check=True)
+else:
+    print('Video capture needs Apple Command Line Tools; the GitHub dashboard remains available.')
 logs = pathlib.Path.home() / 'Library/Logs/blip'
 logs.mkdir(parents=True, exist_ok=True)
 agent.parent.mkdir(parents=True, exist_ok=True)

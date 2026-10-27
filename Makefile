@@ -54,3 +54,11 @@ enclosure-v2:
 	openscad --hardwarnings -o enclosure/stl/v2-usb-plate.stl -D 'part="usb-plate"' enclosure/v2/assembly.scad
 	openscad --hardwarnings -o enclosure/stl/v2-print-layout.stl -D 'part="print-layout"' enclosure/v2/assembly.scad
 	python3 scripts/v2-mesh-check.py
+
+.PHONY: capture-helper
+capture-helper: build/BlipCapture.app/Contents/MacOS/blip-capture
+build/BlipCapture.app/Contents/MacOS/blip-capture: macos/BlipCapture/main.swift macos/BlipCapture/Info.plist Makefile
+	mkdir -p build/BlipCapture.app/Contents/MacOS
+	swiftc -parse-as-library -O -target $(shell uname -m)-apple-macos14.0 -o $@ macos/BlipCapture/main.swift
+	cp macos/BlipCapture/Info.plist build/BlipCapture.app/Contents/Info.plist
+	codesign --force --sign - build/BlipCapture.app

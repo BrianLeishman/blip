@@ -21,12 +21,14 @@ type Snapshot struct {
 	Rows     []Row  `json:"rows"`
 }
 type Event struct {
-	Activity string `json:"activity,omitempty"`
-	Kind     string `json:"kind"`
-	Revision string `json:"revision,omitempty"`
-	ID       string `json:"id,omitempty"`
-	Position int32  `json:"position,omitempty"`
-	Error    string `json:"error,omitempty"`
+	Sequence     uint32 `json:"sequence,omitempty"`
+	VideoVersion int    `json:"videoVersion,omitempty"`
+	Activity     string `json:"activity,omitempty"`
+	Kind         string `json:"kind"`
+	Revision     string `json:"revision,omitempty"`
+	ID           string `json:"id,omitempty"`
+	Position     int32  `json:"position,omitempty"`
+	Error        string `json:"error,omitempty"`
 }
 
 // Selected preserves the highlighted item when a refreshed list reorders.

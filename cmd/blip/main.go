@@ -18,6 +18,7 @@ import (
 
 	"github.com/BrianLeishman/blip/dashboard"
 	ghdata "github.com/BrianLeishman/blip/internal/github"
+	"github.com/BrianLeishman/blip/internal/video"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )
@@ -28,11 +29,18 @@ func main() {
 	probe := flag.Bool("probe", false, "show firmware events without sending dashboard data")
 	once := flag.Bool("once", false, "print GitHub snapshot and exit without connecting")
 	interval := flag.Duration("interval", 30*time.Second, "GitHub polling interval (minimum 15s)")
+	videoDetail := flag.Bool("video-detail", false, "favor video detail (160x120) over motion (80x60)")
+	testVideo := flag.Duration("video-test", 0, "stream a moving test pattern for this duration without fetching GitHub")
 	flag.Parse()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+	if *testVideo > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *testVideo)
+		defer cancel()
+	}
 	var config ghdata.Config
-	if !*probe {
+	if !*probe && *testVideo <= 0 {
 		b, err := os.ReadFile(*configPath)
 		if err != nil {
 			log.Fatal(err)
@@ -78,7 +86,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if err := run(ctx, name, config, state, *probe, *interval); err != nil && ctx.Err() == nil {
+		if err := run(ctx, name, config, state, *probe || *testVideo > 0, *interval, videoOptions{test: *testVideo > 0, detail: *videoDetail}); err != nil && ctx.Err() == nil {
 			log.Print(err)
 		}
 		pause(ctx, 2*time.Second)
@@ -127,7 +135,7 @@ type update struct {
 	err    error
 }
 
-func run(ctx context.Context, name string, c ghdata.Config, state *alertState, probe bool, interval time.Duration) error {
+func run(ctx context.Context, name string, c ghdata.Config, state *alertState, probe bool, interval time.Duration, videoOptions videoOptions) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	p, err := serial.Open(name, &serial.Mode{BaudRate: 115200})
@@ -183,8 +191,35 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 	var visible dashboard.Snapshot
 	var wire []byte
 	var lastSend, lastFetch time.Time
+	var session *videoSession
+	var frames <-chan []byte
+	var captureErrors <-chan error
+	var sequence uint32
+	videoTick := time.NewTicker(100 * time.Millisecond)
+	defer videoTick.Stop()
+	sendVideo := func(kind byte, row int, pixels []byte) error {
+		sequence++
+		var packet [video.MaxPacket]byte
+		n := video.Encode(packet[:], video.Packet{Sequence: sequence, Kind: kind, Row: byte(row), Pixels: pixels})
+		if n == 0 {
+			return errors.New("invalid outgoing video packet")
+		}
+		if session != nil {
+			session.sequence, session.kind, session.pending, session.sent = sequence, kind, true, time.Now()
+		}
+		return writeSerial(ctx, p, packet[:n])
+	}
+	defer func() {
+		if session != nil {
+			session.cancel()
+			log.Printf("Video stopped: %d frames, %.1f displayed fps", session.count, float64(session.count)/time.Since(session.started).Seconds())
+			var packet [video.MaxPacket]byte
+			n := video.Encode(packet[:], video.Packet{Sequence: sequence + 1, Kind: video.Stop})
+			_ = writeSerial(context.WithoutCancel(ctx), p, packet[:n])
+		}
+	}()
 	send := func() error {
-		if len(wire) == 0 {
+		if len(wire) == 0 || session != nil {
 			return nil
 		}
 		for off := 0; off < len(wire); {
@@ -217,10 +252,87 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 		return send()
 	}
 
+	advanceVideo := func() error {
+		if session == nil || session.pending {
+			return nil
+		}
+		if session.message != "" {
+			message := session.message
+			session.message = ""
+			return videoMessage(ctx, p, message)
+		}
+		if !session.ready || session.failed {
+			return nil
+		}
+		if session.frame == nil {
+			if session.next == nil {
+				return nil
+			}
+			session.frame, session.next, session.row = session.next, nil, 0
+		}
+		off := session.row * session.format.Width
+		return sendVideo(session.format.Kind, session.row, session.frame[off:off+session.format.TileBytes()])
+	}
+	startVideo := func(test bool) error {
+		if session != nil {
+			session.cancel()
+		}
+		options := videoOptions
+		options.test = test
+		session = newVideoSession(ctx, options)
+		frames, captureErrors = session.frames, session.errors
+		log.Print("Starting video mode")
+		return sendVideo(video.Start, 0, nil)
+	}
+	stopVideo := func() error {
+		if session == nil {
+			return nil
+		}
+		session.cancel()
+		log.Printf("Video stopped: %d frames, %.1f displayed fps", session.count, float64(session.count)/time.Since(session.started).Seconds())
+		session, frames, captureErrors = nil, nil, nil
+		if err := sendVideo(video.Stop, 0, nil); err != nil {
+			return err
+		}
+		return publish()
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case frame := <-frames:
+			if session != nil {
+				session.next = frame
+				if err := advanceVideo(); err != nil {
+					return err
+				}
+			}
+		case captureErr := <-captureErrors:
+			if session != nil {
+				session.cancel()
+				session.failed = true
+				session.frame, session.next = nil, nil
+				frames, captureErrors = nil, nil
+				session.message = captureErr.Error()
+				if err := advanceVideo(); err != nil {
+					return err
+				}
+			}
+		case <-videoTick.C:
+			if session != nil {
+				if session.pending && time.Since(session.sent) > 2*time.Second {
+					log.Print("Video acknowledgment timed out; returning to dashboard")
+					if err := stopVideo(); err != nil {
+						return err
+					}
+				} else if !session.failed && session.last != nil && session.next == nil && time.Since(session.lastFrame) > time.Second {
+					// Paused video still keeps the stream alive without a frame backlog.
+					session.next = session.last
+					if err := advanceVideo(); err != nil {
+						return err
+					}
+				}
+			}
 		case err := <-readErr:
 			return err
 		case u := <-updates:
@@ -239,7 +351,50 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 			log.Printf("Dashboard refreshed: %d rows", len(visible.Rows))
 		case e := <-events:
 			switch e.Kind {
+			case "video-start":
+				if err := startVideo(false); err != nil {
+					return err
+				}
+			case "video-stop":
+				if err := stopVideo(); err != nil {
+					return err
+				}
+			case "video-ack":
+				if session == nil || !session.pending || e.Sequence != session.sequence {
+					continue
+				}
+				session.pending = false
+				if e.Error != "" {
+					log.Printf("Video packet rejected: %s", e.Error)
+					if err := stopVideo(); err != nil {
+						return err
+					}
+					continue
+				}
+				if session.kind == video.Start {
+					session.ready = true
+				}
+				if (session.kind == video.Tile || session.kind == video.SmoothTile) && !session.failed {
+					session.row += session.format.Rows
+					if session.row >= session.format.Height {
+						session.count++
+						session.lastFrame = time.Now()
+						session.last, session.frame = session.frame, nil
+						session.report()
+					}
+				}
+				if err := advanceVideo(); err != nil {
+					return err
+				}
 			case "hello":
+				if videoOptions.test && session == nil {
+					if e.VideoVersion != 1 {
+						return errors.New("firmware does not support video; run make flash first")
+					}
+					if err := startVideo(true); err != nil {
+						return err
+					}
+				}
 				if probe {
 					log.Printf("Firmware heartbeat; encoder error=%q", e.Error)
 				}

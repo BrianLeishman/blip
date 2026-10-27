@@ -22,9 +22,8 @@ func touchADC(command byte) (int, error) {
 	return int(reply[0])<<4 | int(reply[1])>>4, nil
 }
 
-// In Rotation270, portrait X becomes landscape Y. We only need
-// vertical motion, so absolute horizontal calibration is unnecessary.
-func touchY() (y int, pressed bool, err error) {
+// In Rotation270, portrait X becomes landscape Y and reversed portrait Y becomes X.
+func touchXY() (x, y int, pressed bool, err error) {
 	defer func() {
 		_, powerErr := touchADC(0x00)
 		if err == nil {
@@ -33,23 +32,35 @@ func touchY() (y int, pressed bool, err error) {
 	}()
 	z1, err := touchADC(0xe4)
 	if err != nil || z1 < 10 {
-		return 0, false, err
+		return 0, 0, false, err
 	}
 	z2, err := touchADC(0xf4)
 	if err != nil || z2 >= 4095 {
-		return 0, false, err
+		return 0, 0, false, err
 	}
 	x1, err := touchADC(0xc4)
 	if err != nil {
-		return 0, false, err
+		return 0, 0, false, err
 	}
 	x2, err := touchADC(0xc4)
 	if err != nil {
-		return 0, false, err
+		return 0, 0, false, err
 	}
 	if x1 < 100 || x1 > 4000 || x2-x1 > 100 || x1-x2 > 100 {
-		return 0, false, nil
+		return 0, 0, false, nil
 	}
+	y1, err := touchADC(0xd4)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	y2, err := touchADC(0xd4)
+	if err != nil {
+		return 0, 0, false, err
+	}
+	if y1 < 100 || y1 > 4000 || y2-y1 > 100 || y1-y2 > 100 {
+		return 0, 0, false, nil
+	}
+	x = (3800 - y1) * 319 / 3500
 	y = (x1 - 300) * 239 / 3500
-	return y, true, nil
+	return x, y, true, nil
 }
