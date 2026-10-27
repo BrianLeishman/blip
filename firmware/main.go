@@ -329,7 +329,7 @@ func main() {
 		}
 		now := time.Now()
 		if now.Sub(lastHello) > 5*time.Second {
-			emit(dashboard.Event{Kind: "hello", Revision: snapshot.Revision, Error: encoderError, VideoVersion: 1})
+			emit(dashboard.Event{Kind: "hello", Revision: snapshot.Revision, Error: encoderError, VideoVersion: videoProtocolVersion})
 			lastHello = now
 		}
 		if encoderError != "" && now.Sub(lastRetry) > 5*time.Second {

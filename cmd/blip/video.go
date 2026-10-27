@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -132,7 +133,10 @@ func testFrames(ctx context.Context, frames chan []byte, format video.Format) er
 		frame := make([]byte, format.FrameBytes())
 		for y := range format.Height {
 			for x := range format.Width {
-				frame[y*format.Width+x] = byte(((x+phase*3)%format.Width)*7/(format.Width-1))<<5 | byte(y*7/(format.Height-1))<<2 | byte((x+y+phase)%4)
+				r := uint16(((x + phase*3) % format.Width) * 31 / (format.Width - 1))
+				g := uint16(y * 63 / (format.Height - 1))
+				b := uint16((x + y + phase) % 32)
+				binary.BigEndian.PutUint16(frame[(y*format.Width+x)*2:], r<<11|g<<5|b)
 			}
 		}
 		if err := offerVideo(ctx, frames, frame); err != nil {
@@ -179,6 +183,6 @@ func (v *videoSession) report() {
 	if now.Sub(v.reported) < 5*time.Second {
 		return
 	}
-	log.Printf("Video: %.1f displayed fps (%dx%d RGB332, scaled to 320x240)", float64(v.count-v.reportCount)/now.Sub(v.reported).Seconds(), v.format.Width, v.format.Height)
+	log.Printf("Video: %.1f displayed fps (%dx%d RGB565, scaled to 320x240)", float64(v.count-v.reportCount)/now.Sub(v.reported).Seconds(), v.format.Width, v.format.Height)
 	v.reportCount, v.reported = v.count, now
 }

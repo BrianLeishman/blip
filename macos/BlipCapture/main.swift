@@ -3,7 +3,7 @@ import ScreenCaptureKit
 import CoreMedia
 import CoreVideo
 
-// stdout is exclusively fixed-size RGB332 frames; diagnostics go to stderr.
+// stdout is exclusively fixed-size big-endian RGB565 frames; diagnostics go to stderr.
 func diagnostic(_ message: String) {
     FileHandle.standardError.write(Data((message + "\n").utf8))
 }
@@ -27,12 +27,18 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
         defer { CVPixelBufferUnlockBaseAddress(image, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(image) else { return }
         let stride = CVPixelBufferGetBytesPerRow(image)
-        var frame = Data(count: width * height)
+        var frame = Data(count: width * height * 2)
         frame.withUnsafeMutableBytes { (out: UnsafeMutableRawBufferPointer) in
             for y in 0..<height {
                 let row = base.advanced(by: y * stride).assumingMemoryBound(to: UInt8.self)
                 for x in 0..<width {
-                    out[y * width + x] = (row[x * 4 + 2] & 0xe0) | ((row[x * 4 + 1] >> 3) & 0x1c) | (row[x * 4] >> 6)
+                    let r = UInt16(row[x * 4 + 2] >> 3)
+                    let g = UInt16(row[x * 4 + 1] >> 2)
+                    let b = UInt16(row[x * 4] >> 3)
+                    let pixel = (r << 11) | (g << 5) | b
+                    let offset = (y * width + x) * 2
+                    out[offset] = UInt8(pixel >> 8)
+                    out[offset + 1] = UInt8(pixel & 0xff)
                 }
             }
         }
@@ -84,6 +90,14 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
             config.showsCursor = false
             config.scalesToFit = true
             config.preservesAspectRatio = true
+            // ScreenCaptureKit's default letterbox placement is not centered.
+            let scale = min(Double(width) / window.frame.width, Double(height) / window.frame.height)
+            let pictureWidth = floor(window.frame.width * scale)
+            let pictureHeight = floor(window.frame.height * scale)
+            config.destinationRect = CGRect(
+                x: floor((Double(width) - pictureWidth) / 2),
+                y: floor((Double(height) - pictureHeight) / 2),
+                width: pictureWidth, height: pictureHeight)
             let background = CGColor(gray: 0, alpha: 1)
             config.backgroundColor = background
             config.capturesAudio = false

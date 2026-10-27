@@ -4,18 +4,19 @@ package video
 import "encoding/binary"
 
 const (
+	Version            = 2
 	Width              = 160
 	Height             = 120
-	FrameBytes         = Width * Height // RGB332: one byte per pixel.
-	TileRows           = 3
-	TileBytes          = Width * TileRows
+	FrameBytes         = Width * Height * 2 // Big-endian RGB565: two bytes per pixel.
+	TileRows           = 1
+	TileBytes          = Width * TileRows * 2
 	HeaderBytes        = 13
-	MaxPacket          = HeaderBytes + TileBytes // Fits inside TinyGo's 512-byte USB RX ring.
+	MaxPacket          = HeaderBytes + 480 // Fits inside TinyGo's 512-byte USB RX ring.
 	Start         byte = 1
 	Tile          byte = 2
 	Stop          byte = 3
 	SmoothTile    byte = 4
-	MaxTileRGB565      = 320 * 6 * 4 * 2
+	MaxTileRGB565      = 320 * 3 * 4 * 2
 )
 
 // Format keeps the wire image small while always filling the 320x240 panel.
@@ -27,17 +28,17 @@ type Format struct {
 func FormatFor(kind byte) Format {
 	switch kind {
 	case Tile:
-		return Format{Tile, 160, 120, 2, 3}
+		return Format{Tile, 160, 120, 2, 1}
 	case SmoothTile:
-		return Format{SmoothTile, 80, 60, 4, 6}
+		return Format{SmoothTile, 80, 60, 4, 3}
 	}
 	return Format{}
 }
-func (f Format) FrameBytes() int  { return f.Width * f.Height }
-func (f Format) TileBytes() int   { return f.Width * f.Rows }
+func (f Format) FrameBytes() int  { return f.Width * f.Height * 2 }
+func (f Format) TileBytes() int   { return f.Width * f.Rows * 2 }
 func (f Format) RenderBytes() int { return 320 * f.Rows * f.Scale * 2 }
 
-var magic = [5]byte{0, 'B', 'L', 'V', 1}
+var magic = [5]byte{0, 'B', 'L', 'V', Version}
 
 type Packet struct {
 	Sequence uint32
@@ -122,7 +123,7 @@ func (d *Decoder) Push(b byte) (p Packet, done, valid bool) {
 	return p, true, p.Valid() && crc == want
 }
 
-// ExpandTile scales RGB332 pixels to the panel and converts to big-endian RGB565.
+// ExpandTile scales big-endian RGB565 pixels without discarding any color bits.
 func ExpandTile(dst []byte, pixels []byte, kind byte) bool {
 	f := FormatFor(kind)
 	if f.Width == 0 || len(pixels) != f.TileBytes() || len(dst) != f.RenderBytes() {
@@ -130,13 +131,12 @@ func ExpandTile(dst []byte, pixels []byte, kind byte) bool {
 	}
 	for y := range f.Rows {
 		for x := range f.Width {
-			p := pixels[y*f.Width+x]
-			r, g, b := uint16(p>>5), uint16((p>>2)&7), uint16(p&3)
-			c := ((r<<2 | r>>1) << 11) | ((g<<3 | g) << 5) | (b<<3 | b<<1 | b>>1)
+			source := (y*f.Width + x) * 2
+			high, low := pixels[source], pixels[source+1]
 			for dy := range f.Scale {
 				for dx := range f.Scale {
 					o := ((y*f.Scale+dy)*320 + x*f.Scale + dx) * 2
-					dst[o], dst[o+1] = byte(c>>8), byte(c)
+					dst[o], dst[o+1] = high, low
 				}
 			}
 		}

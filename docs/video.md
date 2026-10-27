@@ -39,13 +39,13 @@ not be capturable. Media-key/Now Playing integration is not part of this prototy
 
 ## Picture quality and measurement
 
-The default favors motion: **80×60 pixels, 256 colors**, scaled 4× to fill the
+The default favors motion: **80×60 pixels, 65,536 colors (RGB565)**, scaled 4× to fill the
 320×240 panel. The optional `-video-detail` companion flag uses **160×120 pixels**,
-scaled 2×, with a lower frame rate. Both modes preserve aspect ratio with black
-bars. The capture helper samples at up to 12 fps; actual display speed depends on
-USB, firmware, and screen throughput. The companion logs completed-frame rates. On the development Feather RP2040,
-the moving USB test pattern measured about **6 fps** in smooth mode and **3 fps**
-in detailed mode. These measurements exclude Firefox capture.
+scaled 2×, with a lower frame rate. Both modes preserve aspect ratio and center
+the picture within black bars. The capture helper samples at up to 12 fps; actual display speed depends on
+USB, firmware, and screen throughput. The companion logs completed-frame rates.
+On the development Feather RP2040, the full-color moving USB test pattern measured
+about **4 fps** at 80×60. This measurement excludes Firefox capture.
 
 To benchmark the device without capture permission, stop the regular companion
 first so only one process owns the serial connection, then run:
@@ -62,16 +62,18 @@ device measurements, not capture or CPU-only benchmarks.
 ## Transport and failure behavior
 
 The normal dashboard remains newline-delimited JSON. A NUL outside a JSON line
-introduces a video packet: `00 42 4c 56 01`, little-endian 32-bit sequence, one-byte
+introduces a video packet: `00 42 4c 56 02`, little-endian 32-bit sequence, one-byte
 kind, one-byte source row, little-endian CRC-16/CCITT-FALSE, then pixel bytes. Kinds
 are start (1), detailed tile (2), stop (3), and smooth tile (4). CRC covers sequence,
-kind, row, and pixels. Tile payloads contain three detailed rows or six smooth rows of RGB332 pixels. Start
-and stop have no payload and a zero row.
+kind, row, and pixels. Tile payloads contain one detailed row or three smooth rows
+of big-endian RGB565 pixels. Start and stop have no payload and a zero row.
+Protocol version 2 changes the pixel format from the initial RGB332 prototype;
+rebuild the companion and capture helper and flash the matching firmware together.
 
 Each packet fits inside TinyGo's 512-byte USB receive buffer (493 bytes maximum).
 The host waits for a matching `video-ack` sequence before sending the next packet.
-The device checks CRC, payload size, and row bounds before drawing, then expands
-the tile to big-endian RGB565. No full-frame buffer is allocated on the Feather.
+The device checks CRC, payload size, and row bounds before drawing, then scales
+the tile without discarding color bits. No full-frame buffer is allocated on the Feather.
 The host retains the latest queued frame rather than building up playback delay.
 Paused video repeats the last picture periodically to maintain the connection.
 

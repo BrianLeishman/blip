@@ -270,7 +270,7 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 			}
 			session.frame, session.next, session.row = session.next, nil, 0
 		}
-		off := session.row * session.format.Width
+		off := session.row * session.format.Width * 2
 		return sendVideo(session.format.Kind, session.row, session.frame[off:off+session.format.TileBytes()])
 	}
 	startVideo := func(test bool) error {
@@ -388,7 +388,7 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 				}
 			case "hello":
 				if videoOptions.test && session == nil {
-					if e.VideoVersion != 1 {
+					if e.VideoVersion != video.Version {
 						return errors.New("firmware does not support video; run make flash first")
 					}
 					if err := startVideo(true); err != nil {

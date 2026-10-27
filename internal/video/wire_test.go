@@ -13,7 +13,7 @@ func TestVideoPacketsAndRecovery(t *testing.T) {
 	} // Includes NUL, newline and magic bytes.
 	var wire [MaxPacket]byte
 	var decoder Decoder
-	for _, packet := range []Packet{{Sequence: 1, Kind: Start}, {Sequence: 2, Kind: Tile, Row: Height - TileRows, Pixels: pixels}, {Sequence: 3, Kind: SmoothTile, Row: 54, Pixels: pixels}, {Sequence: 4, Kind: Stop}} {
+	for _, packet := range []Packet{{Sequence: 1, Kind: Start}, {Sequence: 2, Kind: Tile, Row: Height - TileRows, Pixels: pixels}, {Sequence: 3, Kind: SmoothTile, Row: 57, Pixels: make([]byte, 480)}, {Sequence: 4, Kind: Stop}} {
 		n := Encode(wire[:], packet)
 		if n == 0 || n > 512 {
 			t.Fatal("packet exceeds device RX budget")
@@ -29,7 +29,7 @@ func TestVideoPacketsAndRecovery(t *testing.T) {
 		}
 	}
 	// A corrupt pixel/header is rejected without drawing outside the LCD or losing the next packet.
-	for _, changed := range []int{5, 9, 10, 11, HeaderBytes, MaxPacket - 1} {
+	for _, changed := range []int{5, 9, 10, 11, HeaderBytes, HeaderBytes + TileBytes - 1} {
 		n := Encode(wire[:], Packet{Sequence: 9, Kind: Tile, Pixels: pixels})
 		wire[changed] ^= 0x80
 		for _, b := range wire[:n] {
@@ -47,7 +47,7 @@ func TestVideoPacketsAndRecovery(t *testing.T) {
 			}
 		}
 	}
-	for _, p := range []Packet{{Kind: 255}, {Kind: Tile, Row: 1, Pixels: pixels}, {Kind: Tile, Row: 120, Pixels: pixels}, {Kind: Tile}, {Kind: Start, Pixels: pixels}} {
+	for _, p := range []Packet{{Kind: 255}, {Kind: SmoothTile, Row: 1, Pixels: make([]byte, 480)}, {Kind: Tile, Row: 120, Pixels: pixels}, {Kind: Tile}, {Kind: Start, Pixels: pixels}} {
 		if Encode(wire[:], p) != 0 {
 			t.Fatalf("accepted invalid packet %+v", p)
 		}
@@ -61,30 +61,28 @@ func TestVideoPacketsAndRecovery(t *testing.T) {
 	}
 }
 
-func TestExpandAllRGB332ColorsAndBoundaries(t *testing.T) {
+func TestExpandRGB565ColorsAndBoundaries(t *testing.T) {
+	// Include channel extremes and shades that the old RGB332 palette could not preserve.
+	colors := []uint16{0x0000, 0xffff, 0xf800, 0x07e0, 0x001f, 0x39e7, 0x0821, 0x7bef, 0x1234, 0xabcd}
 	for _, kind := range []byte{Tile, SmoothTile} {
 		format := FormatFor(kind)
 		pixels := make([]byte, format.TileBytes())
-		for i := range pixels {
-			pixels[i] = byte(i)
+		for i := 0; i < len(pixels)/2; i++ {
+			binary.BigEndian.PutUint16(pixels[i*2:], colors[i%len(colors)])
 		}
 		dst := make([]byte, format.RenderBytes()+2)
 		dst[0], dst[len(dst)-1] = 0x19, 0x27
 		if !ExpandTile(dst[1:len(dst)-1], pixels, kind) {
 			t.Fatal("expand failed")
 		}
-		red := [...]uint16{0, 4, 9, 13, 18, 22, 27, 31}
-		green := [...]uint16{0, 9, 18, 27, 36, 45, 54, 63}
-		blue := [...]uint16{0, 10, 21, 31}
 		for y := range format.Rows {
 			for x := range format.Width {
-				p := pixels[y*format.Width+x]
-				want := red[p>>5]<<11 | green[(p>>2)&7]<<5 | blue[p&3]
+				want := colors[(y*format.Width+x)%len(colors)]
 				for dy := range format.Scale {
 					for dx := range format.Scale {
 						off := 1 + ((y*format.Scale+dy)*320+x*format.Scale+dx)*2
 						if got := binary.BigEndian.Uint16(dst[off : off+2]); got != want {
-							t.Fatalf("kind %d color %#x: got %#x want %#x", kind, p, got, want)
+							t.Fatalf("kind %d: lost color bits: got %#x want %#x", kind, got, want)
 						}
 					}
 				}
@@ -103,7 +101,7 @@ func FuzzDecoder(f *testing.F) {
 	var wire [MaxPacket]byte
 	n := Encode(wire[:], Packet{Kind: Tile, Pixels: make([]byte, TileBytes)})
 	f.Add(wire[:n])
-	f.Add([]byte{0, 'B', 'L', 'V', 1})
+	f.Add([]byte{0, 'B', 'L', 'V', Version})
 	f.Fuzz(func(t *testing.T, input []byte) {
 		var d Decoder
 		for _, b := range input {

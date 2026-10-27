@@ -10,6 +10,8 @@ import (
 	"github.com/BrianLeishman/blip/internal/video"
 )
 
+const videoProtocolVersion = video.Version
+
 var videoMode bool
 var videoDecoder video.Decoder
 var videoTile [video.MaxTileRGB565]byte
