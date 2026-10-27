@@ -46,6 +46,11 @@ final class Capture: NSObject, SCStreamOutput, SCStreamDelegate {
     // explicitly until this short-lived helper process exits.
     private static var activeCapture: (SCStream, Capture, CGColor)?
     static func main() async {
+        // A command-line launch must establish the AppKit/WindowServer connection
+        // before ScreenCaptureKit creates its graphics resources.
+        let application = NSApplication.shared
+        application.setActivationPolicy(.accessory)
+        application.finishLaunching()
         guard CGPreflightScreenCaptureAccess() else {
             if CommandLine.arguments.contains("--request-permission") { _ = CGRequestScreenCaptureAccess() }
             diagnostic("Allow BlipCapture screen recording in System Settings > Privacy & Security > Screen & System Audio Recording, then swipe right again.")

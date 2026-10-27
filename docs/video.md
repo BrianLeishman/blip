@@ -18,7 +18,9 @@ The capture helper is built locally as `build/BlipCapture.app`. It lives next to
 `build/blip`; keep them together. On the first attempt, allow screen recording for
 BlipCapture (or the launching application macOS identifies) in **System Settings
 → Privacy & Security → Screen & System Audio Recording**. Retry after granting
-permission. No system audio or microphone capture is requested.
+permission. A locally signed helper can need removing and re-adding to this list
+after it is rebuilt, because its code signature changes. No system audio or
+microphone capture is requested.
 
 1. Open a Firefox video in **Picture-in-Picture** and leave that window open.
 2. Swipe **right** across Blip to start mirroring.
