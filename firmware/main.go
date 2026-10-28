@@ -71,9 +71,6 @@ func ascii(s string, max int) string {
 	return string(b)
 }
 func draw() {
-	if videoMode {
-		return
-	}
 	if selected >= 0 && selected < len(snapshot.Rows) {
 		r := snapshot.Rows[selected]
 		marquee.Set(r.ID, ascii(r.Title, len(r.Title)), time.Now())
@@ -173,9 +170,6 @@ func draw() {
 
 // A single bounded bitmap transfer updates the title, highlight and status together.
 func paintRows(force bool) {
-	if videoMode {
-		return
-	}
 	palette := display.Palette{Background: bg, Highlight: highlight, Text: white, Selection: white}
 	for slot := 0; slot < dashboard.VisibleRows && scrollTop+slot < len(snapshot.Rows); slot++ {
 		i := scrollTop + slot
@@ -266,7 +260,7 @@ func main() {
 		prevPosition, _ = encoder.GetEncoderPosition(0, false)
 	}
 	lastTouch := time.Now()
-	var swipe dashboard.Touch
+	var swipe dashboard.Swipe
 	touchFailed := false
 	lastPoll := time.Now()
 	lastHello := time.Time{}
@@ -275,27 +269,13 @@ func main() {
 	lastRetry := time.Now()
 	var knobButton dashboard.Button
 	for {
-		if videoDecoder.Active() && time.Since(lastVideoPacket) > time.Second {
-			videoDecoder.Reset()
-		}
 		for machine.Serial.Buffered() > 0 {
 			b, e := machine.Serial.ReadByte()
 			if e != nil {
 				break
 			}
-			if videoDecoder.Active() || (n == 0 && b == 0) {
-				receiveVideo(b)
-				continue
-			}
 			if b == '\n' {
 				if !discard && n > 0 {
-					var control struct {
-						VideoMessage string `json:"videoMessage"`
-					}
-					if json.Unmarshal(line[:n], &control) == nil && control.VideoMessage != "" && videoMode {
-						showVideoMessage(ascii(control.VideoMessage, 225))
-						lastVideoData = time.Now()
-					}
 					var next dashboard.Snapshot
 					if json.Unmarshal(line[:n], &next) == nil && next.Version == 1 && len(next.Rows) <= dashboard.MaxRows {
 						needsDraw := snapshot.Revision == "" || !snapshot.SameContent(next) || offlineShown || (!lastUpdate.IsZero() && time.Since(lastUpdate) > 90*time.Second)
@@ -329,7 +309,7 @@ func main() {
 		}
 		now := time.Now()
 		if now.Sub(lastHello) > 5*time.Second {
-			emit(dashboard.Event{Kind: "hello", Revision: snapshot.Revision, Error: encoderError, VideoVersion: videoProtocolVersion})
+			emit(dashboard.Event{Kind: "hello", Revision: snapshot.Revision, Error: encoderError})
 			lastHello = now
 		}
 		if encoderError != "" && now.Sub(lastRetry) > 5*time.Second {
@@ -343,25 +323,16 @@ func main() {
 		}
 		if now.Sub(lastTouch) >= 40*time.Millisecond {
 			lastTouch = now
-			x, y, pressed, touchErr := touchXY()
+			y, pressed, touchErr := touchY()
 			if touchErr != nil {
 				if !touchFailed {
 					emit(dashboard.Event{Kind: "touch-error", Error: touchErr.Error()})
 				}
 				touchFailed = true
-				swipe.Move(0, 0, false)
+				swipe.Move(0, false)
 			} else {
 				touchFailed = false
-				horizontal, delta := swipe.Move(x, y, pressed)
-				if horizontal > 0 && !videoMode {
-					knobButton.Cancel()
-					enterVideo()
-					emit(dashboard.Event{Kind: "video-start"})
-				} else if horizontal < 0 && videoMode {
-					knobButton.Cancel()
-					leaveVideo()
-				}
-				if !videoMode && horizontal == 0 && delta != 0 && len(snapshot.Rows) > 0 {
+				if delta := swipe.Move(y, pressed); delta != 0 && len(snapshot.Rows) > 0 {
 					next := dashboard.ClampTop(scrollTop+delta, len(snapshot.Rows))
 					if next != scrollTop {
 						if selected >= 0 {
@@ -391,25 +362,19 @@ func main() {
 				delta := prevPosition - pos
 				prevPosition = pos
 				testPosition = pos
-				if !videoMode {
-					if len(snapshot.Rows) > 0 {
-						selected = dashboard.MoveSelection(selected, int(delta), len(snapshot.Rows))
-					}
-					scrollTop = dashboard.ScrollTop(scrollTop, selected, len(snapshot.Rows))
+				if len(snapshot.Rows) > 0 {
+					selected = dashboard.MoveSelection(selected, int(delta), len(snapshot.Rows))
 				}
+				scrollTop = dashboard.ScrollTop(scrollTop, selected, len(snapshot.Rows))
 				emit(dashboard.Event{Kind: "turn", Position: pos})
 				draw()
 			}
 			pressed := binary.BigEndian.Uint32(pins[:])&(1<<24) == 0
 			target := dashboard.Row{}
-			if !videoMode && selected >= 0 && selected < len(snapshot.Rows) {
+			if selected >= 0 && selected < len(snapshot.Rows) {
 				target = snapshot.Rows[selected]
 			}
 			if action := knobButton.Update(now, pressed, target); action.Kind != "" {
-				if videoMode {
-					leaveVideo()
-					continue
-				}
 				clicks++
 				action.Revision = snapshot.Revision
 				emit(action)
@@ -434,11 +399,6 @@ func main() {
 				}
 				draw()
 			}
-		}
-		if videoMode && now.Sub(lastVideoData) > 10*time.Second {
-			videoMode = false
-			emit(dashboard.Event{Kind: "video-stop", Error: "Video stream timed out"})
-			draw()
 		}
 		if !snoozeNoticeUntil.IsZero() && !now.Before(snoozeNoticeUntil) {
 			snoozeNoticeUntil = time.Time{}
