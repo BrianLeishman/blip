@@ -111,7 +111,10 @@ The CLI login needs access to notifications and Actions in the relevant reposito
   Highlight an item to see its number, abbreviated repository, and compact status
   together on one footer line. Long repository names shorten before status; the
   list shows ten rows at a time. Long selected titles scroll after a short
-  reading pause, replacing only that row's bitmap. Turn past either end of the list
+  reading pause, replacing only that row's bitmap. Each LCD update explicitly sets
+  its column/page bounds and waits for SPI completion before changing command or
+  chip-select pins. The bus runs at 8 MHz for the enclosure's jumper wiring.
+  Turn past either end of the list
   to clear the highlight and stop title scrolling; turn back to select again.
   Refreshes preserve that unselected state, and clicking it opens nothing. A successful
   LGTM-label workflow does not itself count as the LGTM label.

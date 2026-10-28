@@ -19,7 +19,7 @@ import (
 	"tinygo.org/x/tinyfont/proggy"
 )
 
-var screen *ili9341.Device
+var screen *display.LCD
 var bg = color.RGBA{12, 17, 23, 255}
 var white = color.RGBA{230, 237, 243, 255}
 var muted = color.RGBA{135, 151, 168, 255}
@@ -166,6 +166,9 @@ func draw() {
 		}
 	}
 	label(10, 237, footer, muted)
+	if err := screen.Display(); err != nil {
+		emit(dashboard.Event{Kind: "display-error", Error: err.Error()})
+	}
 }
 
 // A single bounded bitmap transfer updates the title, highlight and status together.
@@ -240,12 +243,18 @@ func initEncoder() (*seesaw.Device, error) {
 }
 func main() {
 	machine.Serial.Configure(machine.UARTConfig{})
-	machine.SPI0.Configure(machine.SPIConfig{Frequency: 24000000, SCK: machine.SPI0_SCK_PIN, SDO: machine.SPI0_SDO_PIN, SDI: machine.SPI0_SDI_PIN})
+	// Stay below the ILI9341's specified 10 MHz serial-write limit, with margin
+	// for the off-board jumper wiring in the compact enclosure.
+	if err := machine.SPI0.Configure(machine.SPIConfig{Frequency: 8000000, SCK: machine.SPI0_SCK_PIN, SDO: machine.SPI0_SDO_PIN, SDI: machine.SPI0_SDI_PIN}); err != nil {
+		panic(err.Error())
+	}
 	// FeatherWing SD CS is D5; keep the unused SD card deselected.
 	machine.D5.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	machine.D5.High()
-	screen = ili9341.NewSPI(machine.SPI0, machine.D10, machine.D9, machine.NoPin)
-	screen.Configure(ili9341.Config{Rotation: ili9341.Rotation270})
+	bus := display.NewBlockingSPI(machine.SPI0)
+	initializer := ili9341.NewSPI(bus, machine.D10, machine.D9, machine.NoPin)
+	initializer.Configure(ili9341.Config{Rotation: ili9341.Rotation270})
+	screen = display.NewLCD(bus, machine.D10, machine.D9)
 	draw()
 	encoder, err := initEncoder()
 	if err != nil {
