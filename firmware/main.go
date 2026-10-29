@@ -37,6 +37,7 @@ var encoderError string
 var spinnerFrame int
 var highlight = color.RGBA{28, 85, 150, 255}
 var rowRenderer display.Renderer
+var chrome display.Band
 var previousRows [dashboard.VisibleRows]display.Row
 var rowDrawn [dashboard.VisibleRows]bool
 var snoozeNoticeUntil time.Time
@@ -48,7 +49,7 @@ func emit(e dashboard.Event) {
 	}
 }
 func label(x, y int16, s string, c color.RGBA) {
-	tinyfont.WriteLine(screen, &proggy.TinySZ8pt7b, x, y, s, c)
+	tinyfont.WriteLine(&chrome, &proggy.TinySZ8pt7b, x, y, s, c)
 }
 func ascii(s string, max int) string {
 	// Abbreviate display text before truncation; IDs and links stay untouched.
@@ -70,14 +71,32 @@ func ascii(s string, max int) string {
 	}
 	return string(b)
 }
-func draw() {
+func updateMarquee() {
 	if selected >= 0 && selected < len(snapshot.Rows) {
 		r := snapshot.Rows[selected]
 		marquee.Set(r.ID, ascii(r.Title, len(r.Title)), time.Now())
 	} else {
 		marquee.Set("", "", time.Now())
 	}
+}
+
+func uploadBand(y int16) {
+	w, h := chrome.Size()
+	if err := screen.DrawRGBBitmap8(0, y, chrome.Pixels(), w, h); err != nil {
+		emit(dashboard.Event{Kind: "display-error", Error: err.Error()})
+	}
+}
+
+func bodyLabel(y int16, text string, c color.RGBA) {
+	chrome.Clear(16, bg)
+	label(12, 12, text, c)
+	uploadBand(y - 12)
+}
+
+func draw() {
+	updateMarquee()
 	screen.FillScreen(bg)
+	chrome.Clear(44, bg)
 	label(10, 17, "blip", green)
 	label(48, 17, "Brian's Little Information Panel", muted)
 	ready, mine, review, urgent, comments, deployments := 0, 0, 0, 0, 0, 0
@@ -115,21 +134,41 @@ func draw() {
 		x += int16((len(text) + 2) * 6)
 	}
 
-	screen.FillRectangle(8, 43, 304, 1, muted)
+	chrome.Line(8, 43, 304, muted)
+	uploadBand(0)
 	if len(snapshot.Rows) == 0 {
 		if snapshot.Revision == "" {
-			label(12, 77, "Screen OK / TinyGo", green)
-			label(12, 100, "Turn and click the knob", white)
-			label(12, 124, "Position: "+strconv.Itoa(int(testPosition)), white)
-			label(12, 145, "Clicks:   "+strconv.Itoa(clicks), white)
+			bodyLabel(77, "Screen OK / TinyGo", green)
+			bodyLabel(100, "Turn and click the knob", white)
+			bodyLabel(124, "Position: "+strconv.Itoa(int(testPosition)), white)
+			bodyLabel(145, "Clicks:   "+strconv.Itoa(clicks), white)
 		} else {
-			label(12, 90, "All clear. Nothing needs attention.", green)
+			bodyLabel(90, "All clear. Nothing needs attention.", green)
 		}
 	} else {
 		// Compose each row before touching the LCD; no visible erase/glyph phases.
 		paintRows(true)
 	}
-	screen.FillRectangle(8, 224, 304, 1, muted)
+	paintFooter()
+	reportDisplayError()
+}
+
+// Selection changes replace only changed row images and the footer. Opening an
+// item does not change any pixels; it must not trigger a full-screen erase.
+func drawSelection() {
+	if len(snapshot.Rows) == 0 {
+		draw()
+		return
+	}
+	updateMarquee()
+	paintRows(false)
+	paintFooter()
+	reportDisplayError()
+}
+
+func paintFooter() {
+	chrome.Clear(16, bg)
+	chrome.Line(8, 0, 304, muted)
 	status := snapshot.Status
 	identity := ""
 	if selected >= 0 && selected < len(snapshot.Rows) {
@@ -165,7 +204,11 @@ func draw() {
 			footer = ascii(identity, 49-len(status)) + " " + status
 		}
 	}
-	label(10, 237, footer, muted)
+	label(10, 13, footer, muted)
+	uploadBand(224)
+}
+
+func reportDisplayError() {
 	if err := screen.Display(); err != nil {
 		emit(dashboard.Event{Kind: "display-error", Error: err.Error()})
 	}
@@ -349,7 +392,7 @@ func main() {
 						}
 						scrollTop = next
 						emit(dashboard.Event{Kind: "touch-scroll", Position: int32(scrollTop)})
-						draw()
+						drawSelection()
 					}
 				}
 			}
@@ -376,7 +419,7 @@ func main() {
 				}
 				scrollTop = dashboard.ScrollTop(scrollTop, selected, len(snapshot.Rows))
 				emit(dashboard.Event{Kind: "turn", Position: pos})
-				draw()
+				drawSelection()
 			}
 			pressed := binary.BigEndian.Uint32(pins[:])&(1<<24) == 0
 			target := dashboard.Row{}
@@ -405,8 +448,11 @@ func main() {
 						}
 					}
 					snoozeNoticeUntil = now.Add(1500 * time.Millisecond)
+					draw()
+				} else if action.Kind == "click" && len(snapshot.Rows) == 0 && snapshot.Revision == "" {
+					// Only the empty-screen hardware demo has a visible click count.
+					draw()
 				}
-				draw()
 			}
 		}
 		if !snoozeNoticeUntil.IsZero() && !now.Before(snoozeNoticeUntil) {

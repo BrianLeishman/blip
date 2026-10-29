@@ -114,6 +114,9 @@ The CLI login needs access to notifications and Actions in the relevant reposito
   reading pause, replacing only that row's bitmap. Each LCD update explicitly sets
   its column/page bounds and waits for SPI completion before changing command or
   chip-select pins. The bus runs at 8 MHz for the enclosure's jumper wiring.
+  Header and footer text are also composed into a reusable bitmap before upload.
+  Turning the knob or scrolling by touch updates changed rows and the footer;
+  an ordinary open click sends its action without repainting the display.
   Turn past either end of the list
   to clear the highlight and stop title scrolling; turn back to select again.
   Refreshes preserve that unselected state, and clicking it opens nothing. A successful
