@@ -20,6 +20,28 @@ height increase has not been measured. These mounting changes are still pending:
 the current model retains two 4.3 mm posts and the new pin-clearance slots. Any
 height change must preserve clearance to the LCD/socket assembly.
 
+### Wiring fit feedback — 2026-11-02
+
+The preceding push-on harness had loose connections. Its shortened, bent Feather
+header pins did not let the jumper sockets engage fully; leaving more straight
+pin length prevented the wiring from fitting inside the case. This was not a
+validated connection arrangement. The display also intermittently went white
+while the Feather continued to respond; the electrical cause remains unconfirmed.
+
+The user subsequently soldered the harness, added MI/MISO, and reconnected the
+unit. Controller readback and recovery from deliberately injected display-off,
+sleep-in, and software-reset commands were verified on the hardware; the user
+confirmed that the test image returned. Long-term idle stability of the soldered
+assembly still needs observation.
+
+For this compact assembly, use flexible insulated wires soldered to the existing
+header pins or accessible connection pads, with each exposed joint insulated and
+strain relief so opening the enclosure cannot pull on the joints. Keep a little
+service slack. The screen board's square connection pads are available for direct
+wiring. Push-on jumpers are suitable for a bench test only when they can engage
+fully and stay seated without pressure from the enclosure. Firmware recovery
+does not make an intermittent power or signal connection reliable.
+
 ## Files and printing
 
 - [`../stl/v2-print-layout.stl`](../stl/v2-print-layout.stl): all three separate parts,
@@ -132,11 +154,23 @@ is still an estimate. Actual cable bend radius and free slack are not proven by 
 
 ## Eight-wire connection
 
+Use the [printable soldering map](../../docs/wiring.md) for the nine-wire version,
+including mirrored views of the Feather's component and reverse faces. With
+normal male headers, the solder joints are on the component face.
+
 Feather to matching FeatherWing header socket: **3.3V, GND, SCK, MOSI (MO), D9,
 D10, SDA, SCL**. D9 is TFT chip select; D10 is data/command. The current firmware
 writes the display without MISO and polls touch without the IRQ pin. Leave the
 unused SD card out. RST can be added to preserve the Wing reset button; EN is
 needed only if retaining its power switch behavior.
+
+**Recommended ninth wire: MI/MISO to matching MI/MISO.** This is the LCD's return
+data path. Firmware reads its controller ID, power/mode, rotation, and pixel
+format every five seconds at 1 MHz (normal writes remain at 8 MHz). Only after a
+healthy ILI9341 read has verified the connection can two consecutive bad readings
+trigger a controller reset and redraw. Recovery is limited to once per minute.
+The eight-wire build remains usable, with recovery disabled until healthy
+readback is established. Unplug USB before changing the harness.
 
 **Screen power uses the second socket from RST on its 16-position header.** The
 third is AREF, although the corresponding Feather RP2040 position is another 3.3V

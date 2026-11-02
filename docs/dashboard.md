@@ -190,6 +190,26 @@ Owner discovery rejects searches reaching 1,000 candidates rather than silently
 omitting repositories. Newly opened PRs may wait for GitHub search indexing.
 The small bitmap font currently uses ASCII, replacing unsupported characters.
 
+With MI/MISO connected, the firmware checks the LCD's control registers every
+five seconds. It logs register changes and a status summary every minute in the
+companion log. After a verified healthy response, two consecutive incorrect
+responses trigger a software reset of the LCD and a redraw of the retained
+dashboard, without rebooting the Feather or losing selection. Recovery attempts
+are limited to once per minute. `display-recovering` records the failed state;
+`display-recovered` confirms a healthy read afterward. Missing MISO at startup
+never arms automatic recovery. This detects lost controller configuration; it
+does not prove that the visible pixels or the analog panel electronics are healthy.
+
+The soldered FeatherWing's readback and LCD-only recovery were tested on
+2026-11-02. Its healthy response was `id=9341 power=94 madctl=f8 format=05`.
+Deliberately sending display-off (`28h`), sleep-in (`10h`), and software-reset
+(`01h`) changed power readback to `90`, `04`, and `08` respectively. Each was
+detected on two reads, reset and redrawn without a USB/MCU reset; the visible test
+image returned. RGB565 serial readback uses the low DBI bits (`05`), not equality
+with the `55` value written to the combined pixel-format register. These tests
+verify recovery from those controller states, not the cause of the earlier
+intermittent white screen.
+
 ```sh
 ./build/blip -once                    # inspect current GitHub data
 ./build/blip -port /dev/cu.usbmodem…  # choose a port if auto-detection is ambiguous

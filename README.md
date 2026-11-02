@@ -87,7 +87,11 @@ and connect the breakout’s QT cable to the **Feather’s QT port**.
 The compact case relocates the Feather using eight wires: **3.3V, GND, SCK, MOSI,
 D9, D10, SDA, SCL**. Important: use the FeatherWing’s **3.3V socket, second from
 RST**; the next socket is AREF. The [wiring guide](enclosure/v2/ASSEMBLY.md#eight-wire-connection)
-explains the orientation and optional connections.
+explains the orientation and optional connections. Add a **ninth wire, MI/MISO
+to MI/MISO**, for LCD state monitoring and automatic controller recovery. The
+display can still run without it, but firmware cannot verify the LCD's state.
+The [printable soldering map](docs/wiring.md) shows all nine connections and both
+faces of the Feather for direct wiring.
 
 ## Get it running
 

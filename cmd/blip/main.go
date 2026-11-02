@@ -255,6 +255,8 @@ func run(ctx context.Context, name string, c ghdata.Config, state *alertState, p
 				log.Printf("Touchscreen: %s", e.Error)
 			case "display-error":
 				log.Printf("Display: %s", e.Error)
+			case "display-status", "display-recovering", "display-recovered":
+				log.Printf("%s: %s", e.Kind, e.Message)
 			case "touch-scroll":
 				log.Printf("Touch scroll: row %d", e.Position)
 			case "ack":

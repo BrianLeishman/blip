@@ -13,7 +13,6 @@ import (
 
 	"github.com/BrianLeishman/blip/dashboard"
 	"github.com/BrianLeishman/blip/internal/display"
-	"tinygo.org/x/drivers/ili9341"
 	"tinygo.org/x/drivers/seesaw"
 	"tinygo.org/x/tinyfont"
 	"tinygo.org/x/tinyfont/proggy"
@@ -41,6 +40,21 @@ var chrome display.Band
 var previousRows [dashboard.VisibleRows]display.Row
 var rowDrawn [dashboard.VisibleRows]bool
 var snoozeNoticeUntil time.Time
+
+const lcdWriteFrequency = 8000000
+
+// Reads have a lower clock limit than writes. No other goroutine uses this bus.
+func lcdStatus() (display.Status, error) {
+	if err := machine.SPI0.SetBaudRate(1000000); err != nil {
+		return display.Status{}, err
+	}
+	status, err := screen.ReadStatus()
+	clockErr := machine.SPI0.SetBaudRate(lcdWriteFrequency)
+	if err != nil {
+		return status, err
+	}
+	return status, clockErr
+}
 
 func emit(e dashboard.Event) {
 	b, err := json.Marshal(e)
@@ -288,16 +302,19 @@ func main() {
 	machine.Serial.Configure(machine.UARTConfig{})
 	// Stay below the ILI9341's specified 10 MHz serial-write limit, with margin
 	// for the off-board jumper wiring in the compact enclosure.
-	if err := machine.SPI0.Configure(machine.SPIConfig{Frequency: 8000000, SCK: machine.SPI0_SCK_PIN, SDO: machine.SPI0_SDO_PIN, SDI: machine.SPI0_SDI_PIN}); err != nil {
+	if err := machine.SPI0.Configure(machine.SPIConfig{Frequency: lcdWriteFrequency, SCK: machine.SPI0_SCK_PIN, SDO: machine.SPI0_SDO_PIN, SDI: machine.SPI0_SDI_PIN}); err != nil {
 		panic(err.Error())
 	}
 	// FeatherWing SD CS is D5; keep the unused SD card deselected.
 	machine.D5.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	machine.D5.High()
+	machine.D10.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	machine.D9.Configure(machine.PinConfig{Mode: machine.PinOutput})
 	bus := display.NewBlockingSPI(machine.SPI0)
-	initializer := ili9341.NewSPI(bus, machine.D10, machine.D9, machine.NoPin)
-	initializer.Configure(ili9341.Config{Rotation: ili9341.Rotation270})
 	screen = display.NewLCD(bus, machine.D10, machine.D9)
+	if err := screen.Reset(); err != nil {
+		panic(err.Error())
+	}
 	draw()
 	encoder, err := initEncoder()
 	if err != nil {
@@ -319,6 +336,10 @@ func main() {
 	offlineShown := false
 	lastSpinner := time.Now()
 	lastRetry := time.Now()
+	var lcdHealth display.Health
+	var previousStatus display.Status
+	lastLCDPoll := time.Time{}
+	lastLCDReport := time.Time{}
 	var knobButton dashboard.Button
 	for {
 		for machine.Serial.Buffered() > 0 {
@@ -360,6 +381,35 @@ func main() {
 			}
 		}
 		now := time.Now()
+		if now.Sub(lastLCDPoll) >= 5*time.Second {
+			lastLCDPoll = now
+			status, statusErr := lcdStatus()
+			if statusErr != nil {
+				emit(dashboard.Event{Kind: "display-error", Error: "read status: " + statusErr.Error()})
+			} else {
+				if status != previousStatus || now.Sub(lastLCDReport) >= time.Minute {
+					emit(dashboard.Event{Kind: "display-status", Message: status.String()})
+					previousStatus = status
+					lastLCDReport = now
+				}
+				if lcdHealth.Observe(status, now) {
+					emit(dashboard.Event{Kind: "display-recovering", Message: status.String()})
+					if resetErr := screen.Reset(); resetErr != nil {
+						emit(dashboard.Event{Kind: "display-error", Error: "reset: " + resetErr.Error()})
+					} else {
+						draw()
+						after, readErr := lcdStatus()
+						if readErr != nil {
+							emit(dashboard.Event{Kind: "display-error", Error: "after reset: " + readErr.Error()})
+						} else if !after.Healthy() {
+							emit(dashboard.Event{Kind: "display-error", Error: "reset did not restore LCD: " + after.String()})
+						} else {
+							emit(dashboard.Event{Kind: "display-recovered", Message: after.String()})
+						}
+					}
+				}
+			}
+		}
 		if now.Sub(lastHello) > 5*time.Second {
 			emit(dashboard.Event{Kind: "hello", Revision: snapshot.Revision, Error: encoderError})
 			lastHello = now

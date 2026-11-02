@@ -18,7 +18,7 @@ type Pin interface {
 // LCD draws into the already-initialized landscape ILI9341. Each write sets both
 // address ranges and RAMWR explicitly under one chip-select assertion. In
 // particular, repeated marquee updates never depend on a cached hardware window.
-// Initialization and rotation are handled by the upstream driver once at startup.
+// Reset initializes the controller in the landscape orientation used here.
 type LCD struct {
 	bus         drivers.SPI
 	dc, cs      Pin

@@ -27,6 +27,7 @@ type Event struct {
 	ID       string `json:"id,omitempty"`
 	Position int32  `json:"position,omitempty"`
 	Error    string `json:"error,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 // Selected preserves the highlighted item when a refreshed list reorders.
