@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE svg
+  PUBLIC '-//W3C//DTD SVG 1.0//EN'
+  'http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd'>
+<svg width="792" height="612" preserveAspectRatio="xMinYMin meet" viewBox="0 0 792 612" xmlns="http://www.w3.org/2000/svg" version="1.0" fill-rule="evenodd" xmlns:xlink="http://www.w3.org/1999/xlink">
+	<title>...</title>
+	<desc>...</desc>
+	<clipPath id="clip">
+		<rect x="0" y="0" width="792" height="612"/>
+	</clipPath>
+	<g id="group" transform="scale(1,-1) translate(0,-612)" style="clip-path: url(#clip)">
+		<g transform="">
+			<rect x="0" y="0" width="792" height="612" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="28" y="580" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 23px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,1160) scale(1,-1)">blip / soldering map</text>
+			<text x="28" y="562" style="font-family: Arial, sans-serif; font-size: 10px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,1124) scale(1,-1)">Feather RP2040 to 2.4-inch TFT FeatherWing V2  |  9 direct wires  |  Keep the existing Feather headers</text>
+			<rect x="28" y="520" width="736" height="28" rx="4" ry="4" style="stroke: rgb(89%,77%,47%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,95%,85%); fill-rule: evenodd;"/>
+			<text x="39" y="530" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 10px;fill: rgb(44%,27%,0%); stroke:none;" transform="translate(0,1060) scale(1,-1)">POWER OFF: unplug USB and any battery. Follow pin labels; the drawings below are not to scale.</text>
+			<rect x="28" y="265" width="232" height="244" rx="7" ry="7" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(94%,96%,97%); fill-rule: evenodd;"/>
+			<text x="72.49462890625" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">FEATHER: component face</text>
+			<text x="70.169970703125" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">USB-C at TOP; use this to identify labels</text>
+			<rect x="101.0" y="271" width="86.0" height="190" rx="5" ry="5" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<rect x="131.0" y="454" width="26.0" height="13" rx="2" ry="2" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,89%,90%); fill-rule: evenodd;"/>
+			<text x="134.04375" y="458" style="font-family: Arial, sans-serif; font-size: 6.4px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,916) scale(1,-1)">USB-C</text>
+			<circle cx="109.0" cy="446.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="81.4" y="443.0" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,886) scale(1,-1)">RST</text>
+			<circle cx="109.0" cy="434.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="88.236328125" y="431.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(72%,20%,17%); stroke:none;" transform="translate(0,863) scale(1,-1)">3V</text>
+			<circle cx="121.0" cy="434.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="118.54462890625" y="432.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,864) scale(1,-1)">A</text>
+			<circle cx="109.0" cy="423.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="56.920703124999996" y="420.8" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,841) scale(1,-1)">3V unused</text>
+			<circle cx="109.0" cy="412.7" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="79.444921875" y="409.7" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(14%,19%,21%); stroke:none;" transform="translate(0,819) scale(1,-1)">GND</text>
+			<circle cx="121.0" cy="412.7" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="118.54462890625" y="410.2" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,820) scale(1,-1)">B</text>
+			<circle cx="109.0" cy="401.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="88.236328125" y="398.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,797) scale(1,-1)">A0</text>
+			<circle cx="109.0" cy="390.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="88.236328125" y="387.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,775) scale(1,-1)">A1</text>
+			<circle cx="109.0" cy="379.4" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="88.236328125" y="376.4" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,752) scale(1,-1)">A2</text>
+			<circle cx="109.0" cy="368.3" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="88.236328125" y="365.3" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,730) scale(1,-1)">A3</text>
+			<circle cx="109.0" cy="357.2" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="89.21171875" y="354.2" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,708) scale(1,-1)">24</text>
+			<circle cx="109.0" cy="346.1" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="89.21171875" y="343.1" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,686) scale(1,-1)">25</text>
+			<circle cx="109.0" cy="335.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="80.4203125" y="332.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(65%,36%,0%); stroke:none;" transform="translate(0,664) scale(1,-1)">SCK</text>
+			<circle cx="121.0" cy="335.0" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="118.54462890625" y="332.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,665) scale(1,-1)">C</text>
+			<circle cx="109.0" cy="323.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="84.824609375" y="320.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(48%,27%,61%); stroke:none;" transform="translate(0,641) scale(1,-1)">MO</text>
+			<circle cx="121.0" cy="323.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="118.54462890625" y="321.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,642) scale(1,-1)">D</text>
+			<circle cx="109.0" cy="312.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="89.224609375" y="309.8" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(15%,36%,69%); stroke:none;" transform="translate(0,619) scale(1,-1)">MI</text>
+			<circle cx="121.0" cy="312.8" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="118.7322265625" y="310.3" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,620) scale(1,-1)">E</text>
+			<circle cx="109.0" cy="301.70000000000005" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="86.775390625" y="298.70000000000005" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,597) scale(1,-1)">RX</text>
+			<circle cx="109.0" cy="290.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="87.755078125" y="287.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,575) scale(1,-1)">TX</text>
+			<circle cx="109.0" cy="279.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="94.105859375" y="276.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,553) scale(1,-1)">4</text>
+			<circle cx="179.0" cy="401.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="398.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,797) scale(1,-1)">BAT</text>
+			<circle cx="179.0" cy="390.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="387.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,775) scale(1,-1)">EN</text>
+			<circle cx="179.0" cy="379.4" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="376.4" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,752) scale(1,-1)">USB</text>
+			<circle cx="179.0" cy="368.3" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="365.3" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,730) scale(1,-1)">13</text>
+			<circle cx="179.0" cy="357.2" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="354.2" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,708) scale(1,-1)">12</text>
+			<circle cx="179.0" cy="346.1" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="343.1" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,686) scale(1,-1)">11</text>
+			<circle cx="179.0" cy="335.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="189.0" y="332.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(3%,49%,52%); stroke:none;" transform="translate(0,664) scale(1,-1)">10</text>
+			<circle cx="167.0" cy="335.0" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="164.35537109375" y="332.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,665) scale(1,-1)">G</text>
+			<circle cx="179.0" cy="323.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="189.0" y="320.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(14%,45%,26%); stroke:none;" transform="translate(0,641) scale(1,-1)">9</text>
+			<circle cx="167.0" cy="323.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="164.92314453125" y="321.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,642) scale(1,-1)">F</text>
+			<circle cx="179.0" cy="312.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="309.8" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,619) scale(1,-1)">6</text>
+			<circle cx="179.0" cy="301.70000000000005" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="189.0" y="298.70000000000005" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,597) scale(1,-1)">5</text>
+			<circle cx="179.0" cy="290.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="189.0" y="287.6" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(29%,34%,49%); stroke:none;" transform="translate(0,575) scale(1,-1)">SCL</text>
+			<circle cx="167.0" cy="290.6" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="166.05537109375" y="288.1" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,576) scale(1,-1)">I</text>
+			<circle cx="179.0" cy="279.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="189.0" y="276.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(57%,31%,18%); stroke:none;" transform="translate(0,553) scale(1,-1)">SDA</text>
+			<circle cx="167.0" cy="279.5" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="164.54462890625" y="277.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,554) scale(1,-1)">H</text>
+			<text x="134.5765625" y="371" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,742) scale(1,-1)">CHIP /</text>
+			<text x="123.2" y="361" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,722) scale(1,-1)">COMPONENT</text>
+			<text x="136.53125" y="351" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,702) scale(1,-1)">SIDE</text>
+			<rect x="280" y="265" width="232" height="244" rx="7" ry="7" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(94%,96%,97%); fill-rule: evenodd;"/>
+			<text x="324.1884765625" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">FEATHER: solder-joint face</text>
+			<text x="329.469091796875" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">Flip left-to-right; keep USB-C at TOP</text>
+			<rect x="353.0" y="271" width="86.0" height="190" rx="5" ry="5" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<rect x="383.0" y="454" width="26.0" height="13" rx="2" ry="2" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,89%,90%); fill-rule: evenodd;"/>
+			<text x="386.04375" y="458" style="font-family: Arial, sans-serif; font-size: 6.4px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,916) scale(1,-1)">USB-C</text>
+			<circle cx="431.0" cy="446.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="443.0" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,886) scale(1,-1)">RST</text>
+			<circle cx="431.0" cy="434.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="441.0" y="431.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(72%,20%,17%); stroke:none;" transform="translate(0,863) scale(1,-1)">3V</text>
+			<circle cx="419.0" cy="434.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="416.54462890625" y="432.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,864) scale(1,-1)">A</text>
+			<circle cx="431.0" cy="423.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="420.8" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,841) scale(1,-1)">3V unused</text>
+			<circle cx="431.0" cy="412.7" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="441.0" y="409.7" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(14%,19%,21%); stroke:none;" transform="translate(0,819) scale(1,-1)">GND</text>
+			<circle cx="419.0" cy="412.7" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="416.54462890625" y="410.2" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,820) scale(1,-1)">B</text>
+			<circle cx="431.0" cy="401.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="398.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,797) scale(1,-1)">A0</text>
+			<circle cx="431.0" cy="390.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="387.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,775) scale(1,-1)">A1</text>
+			<circle cx="431.0" cy="379.4" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="376.4" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,752) scale(1,-1)">A2</text>
+			<circle cx="431.0" cy="368.3" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="365.3" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,730) scale(1,-1)">A3</text>
+			<circle cx="431.0" cy="357.2" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="354.2" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,708) scale(1,-1)">24</text>
+			<circle cx="431.0" cy="346.1" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="343.1" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,686) scale(1,-1)">25</text>
+			<circle cx="431.0" cy="335.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="441.0" y="332.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(65%,36%,0%); stroke:none;" transform="translate(0,664) scale(1,-1)">SCK</text>
+			<circle cx="419.0" cy="335.0" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="416.54462890625" y="332.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,665) scale(1,-1)">C</text>
+			<circle cx="431.0" cy="323.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="441.0" y="320.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(48%,27%,61%); stroke:none;" transform="translate(0,641) scale(1,-1)">MO</text>
+			<circle cx="419.0" cy="323.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="416.54462890625" y="321.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,642) scale(1,-1)">D</text>
+			<circle cx="431.0" cy="312.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="309.8" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(15%,36%,69%); stroke:none;" transform="translate(0,619) scale(1,-1)">MI</text>
+			<circle cx="419.0" cy="312.8" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="416.7322265625" y="310.3" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,620) scale(1,-1)">E</text>
+			<circle cx="431.0" cy="301.70000000000005" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="298.70000000000005" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,597) scale(1,-1)">RX</text>
+			<circle cx="431.0" cy="290.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="287.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,575) scale(1,-1)">TX</text>
+			<circle cx="431.0" cy="279.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="441.0" y="276.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,553) scale(1,-1)">4</text>
+			<circle cx="361.0" cy="401.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="333.885546875" y="398.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,797) scale(1,-1)">BAT</text>
+			<circle cx="361.0" cy="390.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="338.775390625" y="387.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,775) scale(1,-1)">EN</text>
+			<circle cx="361.0" cy="379.4" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="332.905859375" y="376.4" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,752) scale(1,-1)">USB</text>
+			<circle cx="361.0" cy="368.3" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="341.21171875" y="365.3" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,730) scale(1,-1)">13</text>
+			<circle cx="361.0" cy="357.2" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="341.21171875" y="354.2" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,708) scale(1,-1)">12</text>
+			<circle cx="361.0" cy="346.1" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="341.21171875" y="343.1" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,686) scale(1,-1)">11</text>
+			<circle cx="361.0" cy="335.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="341.21171875" y="332.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(3%,49%,52%); stroke:none;" transform="translate(0,664) scale(1,-1)">10</text>
+			<circle cx="373.0" cy="335.0" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="370.35537109375" y="332.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,665) scale(1,-1)">G</text>
+			<circle cx="361.0" cy="323.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="346.105859375" y="320.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(14%,45%,26%); stroke:none;" transform="translate(0,641) scale(1,-1)">9</text>
+			<circle cx="373.0" cy="323.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="370.92314453125" y="321.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,642) scale(1,-1)">F</text>
+			<circle cx="361.0" cy="312.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="346.105859375" y="309.8" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,619) scale(1,-1)">6</text>
+			<circle cx="361.0" cy="301.70000000000005" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="346.105859375" y="298.70000000000005" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,597) scale(1,-1)">5</text>
+			<circle cx="361.0" cy="290.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="333.4" y="287.6" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(29%,34%,49%); stroke:none;" transform="translate(0,575) scale(1,-1)">SCL</text>
+			<circle cx="373.0" cy="290.6" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="372.05537109375" y="288.1" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,576) scale(1,-1)">I</text>
+			<circle cx="361.0" cy="279.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="332.4203125" y="276.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(57%,31%,18%); stroke:none;" transform="translate(0,553) scale(1,-1)">SDA</text>
+			<circle cx="373.0" cy="279.5" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="370.54462890625" y="277.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,554) scale(1,-1)">H</text>
+			<text x="382.665625" y="371" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,742) scale(1,-1)">SOLDER</text>
+			<text x="384.4421875" y="361" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,722) scale(1,-1)">JOINTS</text>
+			<text x="380.353125" y="351" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,702) scale(1,-1)">THIS SIDE</text>
+			<rect x="532" y="265" width="232" height="244" rx="7" ry="7" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(94%,96%,97%); fill-rule: evenodd;"/>
+			<text x="576.48388671875" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">SCREEN: header / pad map</text>
+			<text x="568.0099609375" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">Connector side facing you; RST end at TOP</text>
+			<rect x="605.0" y="271" width="86.0" height="190" rx="5" ry="5" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<text x="633.793359375" y="454" style="font-family: Arial, sans-serif; font-size: 7.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,908) scale(1,-1)">RST end</text>
+			<circle cx="613.0" cy="446.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="585.4" y="443.0" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,886) scale(1,-1)">RST</text>
+			<circle cx="613.0" cy="434.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="431.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(72%,20%,17%); stroke:none;" transform="translate(0,863) scale(1,-1)">3V</text>
+			<circle cx="625.0" cy="434.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="622.54462890625" y="432.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,864) scale(1,-1)">A</text>
+			<circle cx="613.0" cy="423.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="548.21484375" y="420.8" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,841) scale(1,-1)">AREF unused</text>
+			<circle cx="613.0" cy="412.7" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="583.444921875" y="409.7" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(14%,19%,21%); stroke:none;" transform="translate(0,819) scale(1,-1)">GND</text>
+			<circle cx="625.0" cy="412.7" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="622.54462890625" y="410.2" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,820) scale(1,-1)">B</text>
+			<circle cx="613.0" cy="401.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="398.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,797) scale(1,-1)">A0</text>
+			<circle cx="613.0" cy="390.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="387.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,775) scale(1,-1)">A1</text>
+			<circle cx="613.0" cy="379.4" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="376.4" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,752) scale(1,-1)">A2</text>
+			<circle cx="613.0" cy="368.3" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="365.3" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,730) scale(1,-1)">A3</text>
+			<circle cx="613.0" cy="357.2" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="354.2" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,708) scale(1,-1)">A4</text>
+			<circle cx="613.0" cy="346.1" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="592.236328125" y="343.1" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,686) scale(1,-1)">A5</text>
+			<circle cx="613.0" cy="335.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="584.4203125" y="332.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(65%,36%,0%); stroke:none;" transform="translate(0,664) scale(1,-1)">SCK</text>
+			<circle cx="625.0" cy="335.0" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="622.54462890625" y="332.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,665) scale(1,-1)">C</text>
+			<circle cx="613.0" cy="323.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="588.824609375" y="320.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(48%,27%,61%); stroke:none;" transform="translate(0,641) scale(1,-1)">MO</text>
+			<circle cx="625.0" cy="323.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="622.54462890625" y="321.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,642) scale(1,-1)">D</text>
+			<circle cx="613.0" cy="312.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="593.224609375" y="309.8" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(15%,36%,69%); stroke:none;" transform="translate(0,619) scale(1,-1)">MI</text>
+			<circle cx="625.0" cy="312.8" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="622.7322265625" y="310.3" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,620) scale(1,-1)">E</text>
+			<circle cx="613.0" cy="301.70000000000005" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="590.775390625" y="298.70000000000005" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,597) scale(1,-1)">RX</text>
+			<circle cx="613.0" cy="290.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="591.755078125" y="287.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,575) scale(1,-1)">TX</text>
+			<circle cx="613.0" cy="279.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="596.155078125" y="276.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,553) scale(1,-1)">G</text>
+			<circle cx="683.0" cy="401.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="398.6" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,797) scale(1,-1)">BAT</text>
+			<circle cx="683.0" cy="390.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="387.5" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,775) scale(1,-1)">EN</text>
+			<circle cx="683.0" cy="379.4" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="376.4" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,752) scale(1,-1)">USB</text>
+			<circle cx="683.0" cy="368.3" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="365.3" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,730) scale(1,-1)">13</text>
+			<circle cx="683.0" cy="357.2" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="354.2" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,708) scale(1,-1)">12</text>
+			<circle cx="683.0" cy="346.1" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="343.1" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,686) scale(1,-1)">11</text>
+			<circle cx="683.0" cy="335.0" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="693.0" y="332.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(3%,49%,52%); stroke:none;" transform="translate(0,664) scale(1,-1)">10</text>
+			<circle cx="671.0" cy="335.0" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="668.35537109375" y="332.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,665) scale(1,-1)">G</text>
+			<circle cx="683.0" cy="323.9" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="693.0" y="320.9" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(14%,45%,26%); stroke:none;" transform="translate(0,641) scale(1,-1)">9</text>
+			<circle cx="671.0" cy="323.9" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="668.92314453125" y="321.4" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,642) scale(1,-1)">F</text>
+			<circle cx="683.0" cy="312.8" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="309.8" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,619) scale(1,-1)">6</text>
+			<circle cx="683.0" cy="301.70000000000005" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(60%,65%,69%); fill-rule: evenodd;"/>
+			<text x="693.0" y="298.70000000000005" style="font-family: Arial, sans-serif; font-size: 8.8px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,597) scale(1,-1)">5</text>
+			<circle cx="683.0" cy="290.6" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="693.0" y="287.6" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(29%,34%,49%); stroke:none;" transform="translate(0,575) scale(1,-1)">SCL</text>
+			<circle cx="671.0" cy="290.6" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="670.05537109375" y="288.1" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,576) scale(1,-1)">I</text>
+			<circle cx="683.0" cy="279.5" r="3.4" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="693.0" y="276.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(57%,31%,18%); stroke:none;" transform="translate(0,553) scale(1,-1)">SDA</text>
+			<circle cx="671.0" cy="279.5" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="668.54462890625" y="277.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,554) scale(1,-1)">H</text>
+			<text x="641.4234375" y="371" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,742) scale(1,-1)">LCD</text>
+			<text x="637.5125" y="361" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,722) scale(1,-1)">behind</text>
+			<text x="634.665625" y="351" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,702) scale(1,-1)">this PCB</text>
+			<text x="28" y="249" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 10px;fill: rgb(63%,18%,15%); stroke:none;" transform="translate(0,498) scale(1,-1)">IMPORTANT: Feather A (3V) goes to screen A (3V). The next screen position is AREF - leave it unused.</text>
+			<rect x="28" y="216" width="736" height="20" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(9%,18%,26%); fill-rule: evenodd;"/>
+			<text x="33" y="222" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.2px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,444) scale(1,-1)">Wire</text>
+			<text x="63" y="222" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.2px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,444) scale(1,-1)">Feather pin</text>
+			<text x="184" y="222" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.2px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,444) scale(1,-1)">Screen pad / socket</text>
+			<text x="347" y="222" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.2px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,444) scale(1,-1)">What it does</text>
+			<rect x="28" y="198" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,95%,96%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="207.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(72%,20%,17%); fill-rule: evenodd;"/>
+			<text x="40.111328125" y="204" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,408) scale(1,-1)">A</text>
+			<text x="63" y="204" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,408) scale(1,-1)">3V / 3.3V</text>
+			<text x="184" y="204" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,408) scale(1,-1)">3V / 3.3V</text>
+			<text x="347" y="204" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,408) scale(1,-1)">3.3 V power - use the second position from RST</text>
+			<path d="M 28,198 L 764,198 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="180" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="189.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,19%,21%); fill-rule: evenodd;"/>
+			<text x="40.111328125" y="186" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,372) scale(1,-1)">B</text>
+			<text x="63" y="186" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,372) scale(1,-1)">GND</text>
+			<text x="184" y="186" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,372) scale(1,-1)">GND</text>
+			<text x="347" y="186" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,372) scale(1,-1)">Ground / power return</text>
+			<path d="M 28,180 L 764,180 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="162" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,95%,96%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="171.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(65%,36%,0%); fill-rule: evenodd;"/>
+			<text x="40.111328125" y="168" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,336) scale(1,-1)">C</text>
+			<text x="63" y="168" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,336) scale(1,-1)">SCK</text>
+			<text x="184" y="168" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,336) scale(1,-1)">SCK / SCLK</text>
+			<text x="347" y="168" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,336) scale(1,-1)">SPI clock: timing for screen commands and pixels</text>
+			<path d="M 28,162 L 764,162 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="144" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="153.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(48%,27%,61%); fill-rule: evenodd;"/>
+			<text x="40.111328125" y="150" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,300) scale(1,-1)">D</text>
+			<text x="63" y="150" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,300) scale(1,-1)">MO / MOSI</text>
+			<text x="184" y="150" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,300) scale(1,-1)">MO / MOSI</text>
+			<text x="347" y="150" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,300) scale(1,-1)">SPI data from Feather to screen</text>
+			<path d="M 28,144 L 764,144 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="126" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,95%,96%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="135.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(15%,36%,69%); fill-rule: evenodd;"/>
+			<text x="40.33203125" y="132" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,264) scale(1,-1)">E</text>
+			<text x="63" y="132" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,264) scale(1,-1)">MI / MISO</text>
+			<text x="184" y="132" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,264) scale(1,-1)">MI / MISO</text>
+			<text x="347" y="132" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,264) scale(1,-1)">SPI return data: LCD state readback (new ninth wire)</text>
+			<path d="M 28,126 L 764,126 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="108" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="117.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(14%,45%,26%); fill-rule: evenodd;"/>
+			<text x="40.556640625" y="114" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,228) scale(1,-1)">F</text>
+			<text x="63" y="114" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,228) scale(1,-1)">9 / D9</text>
+			<text x="184" y="114" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,228) scale(1,-1)">9 / D9 (TFTCS)</text>
+			<text x="347" y="114" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,228) scale(1,-1)">Screen chip select</text>
+			<path d="M 28,108 L 764,108 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="90" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,95%,96%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="99.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(3%,49%,52%); fill-rule: evenodd;"/>
+			<text x="39.888671875" y="96" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,192) scale(1,-1)">G</text>
+			<text x="63" y="96" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,192) scale(1,-1)">10 / D10</text>
+			<text x="184" y="96" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,192) scale(1,-1)">10 / D10 (TFTDC)</text>
+			<text x="347" y="96" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,192) scale(1,-1)">Selects command bytes versus pixel/data bytes</text>
+			<path d="M 28,90 L 764,90 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="72" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="81.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
+			<text x="40.111328125" y="78" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,156) scale(1,-1)">H</text>
+			<text x="63" y="78" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,156) scale(1,-1)">SDA</text>
+			<text x="184" y="78" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,156) scale(1,-1)">SDA</text>
+			<text x="347" y="78" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,156) scale(1,-1)">I2C data: touchscreen on the screen board</text>
+			<path d="M 28,72 L 764,72 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<rect x="28" y="54" width="736" height="18" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(92%,95%,96%); fill-rule: evenodd;"/>
+			<circle cx="43" cy="63.0" r="6" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(29%,34%,49%); fill-rule: evenodd;"/>
+			<text x="41.888671875" y="60" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,120) scale(1,-1)">I</text>
+			<text x="63" y="60" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,120) scale(1,-1)">SCL</text>
+			<text x="184" y="60" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 9.3px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,120) scale(1,-1)">SCL</text>
+			<text x="347" y="60" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,120) scale(1,-1)">I2C clock: touchscreen on the screen board</text>
+			<path d="M 28,54 L 764,54 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
+			<text x="28" y="42" style="font-family: Arial, sans-serif; font-size: 8.1px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,84) scale(1,-1)">Letters/colors are wire IDs, not pin numbers. Gray pins stay unconnected. Knob: keep its QT cable plugged into the Feather.</text>
+			<text x="28" y="31" style="font-family: Arial, sans-serif; font-size: 8.1px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,62) scale(1,-1)">Solder to the existing Feather pin joints; inspect for bridges. Screen square pads and matching sockets share the same signals.</text>
+			<text x="28" y="20" style="font-family: Arial, sans-serif; font-size: 7.7px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,40) scale(1,-1)">Sources: Adafruit Feather RP2040 PCB + TFT FeatherWing V2 PCB / pinout guides. Layout is a reference; verify board labels.</text>
+		</g>
+	</g>
+</svg>
