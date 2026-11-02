@@ -17,7 +17,7 @@
 			<text x="39" y="530" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 10px;fill: rgb(44%,27%,0%); stroke:none;" transform="translate(0,1060) scale(1,-1)">POWER OFF: unplug USB and any battery. Follow pin labels; the drawings below are not to scale.</text>
 			<rect x="28" y="265" width="232" height="244" rx="7" ry="7" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(94%,96%,97%); fill-rule: evenodd;"/>
 			<text x="72.49462890625" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">FEATHER: component face</text>
-			<text x="70.169970703125" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">USB-C at TOP; use this to identify labels</text>
+			<text x="59.91396484375001" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">USB-C at TOP; usual male-header solder side</text>
 			<rect x="101.0" y="271" width="86.0" height="190" rx="5" ry="5" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
 			<rect x="131.0" y="454" width="26.0" height="13" rx="2" ry="2" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,89%,90%); fill-rule: evenodd;"/>
 			<text x="134.04375" y="458" style="font-family: Arial, sans-serif; font-size: 6.4px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,916) scale(1,-1)">USB-C</text>
@@ -99,8 +99,8 @@
 			<text x="123.2" y="361" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,722) scale(1,-1)">COMPONENT</text>
 			<text x="136.53125" y="351" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,702) scale(1,-1)">SIDE</text>
 			<rect x="280" y="265" width="232" height="244" rx="7" ry="7" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(94%,96%,97%); fill-rule: evenodd;"/>
-			<text x="324.1884765625" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">FEATHER: solder-joint face</text>
-			<text x="329.469091796875" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">Flip left-to-right; keep USB-C at TOP</text>
+			<text x="334.557373046875" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">FEATHER: reverse face</text>
+			<text x="323.0888671875" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">USB-C at TOP; mirrored underside view</text>
 			<rect x="353.0" y="271" width="86.0" height="190" rx="5" ry="5" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(100%,100%,100%); fill-rule: evenodd;"/>
 			<rect x="383.0" y="454" width="26.0" height="13" rx="2" ry="2" style="stroke: rgb(54%,61%,65%); stroke-linecap: butt; stroke-width: 1; fill: rgb(86%,89%,90%); fill-rule: evenodd;"/>
 			<text x="386.04375" y="458" style="font-family: Arial, sans-serif; font-size: 6.4px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,916) scale(1,-1)">USB-C</text>
@@ -178,9 +178,9 @@
 			<text x="332.4203125" y="276.5" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 8.8px;fill: rgb(57%,31%,18%); stroke:none;" transform="translate(0,553) scale(1,-1)">SDA</text>
 			<circle cx="373.0" cy="279.5" r="5.1" style="stroke: none; stroke-linecap: butt; stroke-width: 1; fill: rgb(57%,31%,18%); fill-rule: evenodd;"/>
 			<text x="370.54462890625" y="277.0" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.8px;fill: rgb(100%,100%,100%); stroke:none;" transform="translate(0,554) scale(1,-1)">H</text>
-			<text x="382.665625" y="371" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,742) scale(1,-1)">SOLDER</text>
-			<text x="384.4421875" y="361" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,722) scale(1,-1)">JOINTS</text>
-			<text x="380.353125" y="351" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,702) scale(1,-1)">THIS SIDE</text>
+			<text x="380.70625" y="371" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,742) scale(1,-1)">REVERSE</text>
+			<text x="389.24375" y="361" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,722) scale(1,-1)">PCB</text>
+			<text x="387.2890625" y="351" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 6.4px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,702) scale(1,-1)">FACE</text>
 			<rect x="532" y="265" width="232" height="244" rx="7" ry="7" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 1; fill: rgb(94%,96%,97%); fill-rule: evenodd;"/>
 			<text x="576.48388671875" y="491" style="font-family: Arial, sans-serif; font-weight: bold; font-size: 11px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,982) scale(1,-1)">SCREEN: header / pad map</text>
 			<text x="568.0099609375" y="476" style="font-family: Arial, sans-serif; font-size: 8.2px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,952) scale(1,-1)">Connector side facing you; RST end at TOP</text>
@@ -333,7 +333,7 @@
 			<text x="347" y="60" style="font-family: Arial, sans-serif; font-size: 9.1px;fill: rgb(9%,18%,26%); stroke:none;" transform="translate(0,120) scale(1,-1)">I2C clock: touchscreen on the screen board</text>
 			<path d="M 28,54 L 764,54 Z" style="stroke: rgb(85%,88%,90%); stroke-linecap: butt; stroke-width: 0.6;"/>
 			<text x="28" y="42" style="font-family: Arial, sans-serif; font-size: 8.1px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,84) scale(1,-1)">Letters/colors are wire IDs, not pin numbers. Gray pins stay unconnected. Knob: keep its QT cable plugged into the Feather.</text>
-			<text x="28" y="31" style="font-family: Arial, sans-serif; font-size: 8.1px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,62) scale(1,-1)">Solder to the existing Feather pin joints; inspect for bridges. Screen square pads and matching sockets share the same signals.</text>
+			<text x="28" y="31" style="font-family: Arial, sans-serif; font-size: 8.1px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,62) scale(1,-1)">Male-header solder joints are usually on the component face. Match the drawing to the face you are looking at; inspect for bridges.</text>
 			<text x="28" y="20" style="font-family: Arial, sans-serif; font-size: 7.7px;fill: rgb(32%,40%,47%); stroke:none;" transform="translate(0,40) scale(1,-1)">Sources: Adafruit Feather RP2040 PCB + TFT FeatherWing V2 PCB / pinout guides. Layout is a reference; verify board labels.</text>
 		</g>
 	</g>

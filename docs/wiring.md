@@ -4,7 +4,10 @@
 
 ![Nine-wire soldering map](images/blip-soldering-map.svg)
 
-The middle drawing shows the Feather's solder-joint face. Keep USB-C at the top
+The first drawing shows the Feather's component face; with the usual male-header
+installation, this is also where the short pin tails and their solder joints are.
+The middle drawing shows the reverse face, not an assumed soldering face. Match
+the drawing to the actual face you are looking at. Keep USB-C at the top
 when flipping the board left-to-right. The screen drawing shows its header/pad
 side, with the RST end at the top; it is not a drawing of the LCD face. These are
 schematic pin maps, not board outlines or scale drawings.

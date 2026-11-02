@@ -4,7 +4,7 @@
 Header order verified against Adafruit Eagle CAD:
 https://github.com/adafruit/Adafruit-Feather-RP2040-PCB
 https://github.com/adafruit/Adafruit-2.4-TFT-FeatherWing-PCB
-View transformations: USB/RST end up; the Feather solder face mirrors left/right.
+View transformations: USB/RST end up; the Feather reverse face mirrors left/right.
 """
 
 import os
@@ -111,7 +111,7 @@ def board(x, title, subtitle, mirror=False, wing=False):
             header_pin(left_x, top+i*pitch, label, wire, 'left')
         for i, (label, wire) in enumerate(right):
             header_pin(right_x, top+(i+4)*pitch, label, wire, 'right')
-    center_label = ['LCD', 'behind', 'this PCB'] if wing else (['SOLDER', 'JOINTS', 'THIS SIDE'] if mirror else ['CHIP /', 'COMPONENT', 'SIDE'])
+    center_label = ['LCD', 'behind', 'this PCB'] if wing else (['REVERSE', 'PCB', 'FACE'] if mirror else ['CHIP /', 'COMPONENT', 'SIDE'])
     for i, value in enumerate(center_label):
         text(cx, 241+i*10, value, 6.4, MUTED, True, 'middle')
 
@@ -122,8 +122,8 @@ text(28, 50, 'Feather RP2040 to 2.4-inch TFT FeatherWing V2  |  9 direct wires  
 rect(28, 64, 736, 28, '#fff3d9', '#e4c578', 4)
 text(39, 82, 'POWER OFF: unplug USB and any battery. Follow pin labels; the drawings below are not to scale.', 10, '#714500', True)
 
-board(28, 'FEATHER: component face', 'USB-C at TOP; use this to identify labels')
-board(280, 'FEATHER: solder-joint face', 'Flip left-to-right; keep USB-C at TOP', mirror=True)
+board(28, 'FEATHER: component face', 'USB-C at TOP; usual male-header solder side')
+board(280, 'FEATHER: reverse face', 'USB-C at TOP; mirrored underside view', mirror=True)
 board(532, 'SCREEN: header / pad map', 'Connector side facing you; RST end at TOP', wing=True)
 
 text(28, 363, 'IMPORTANT: Feather A (3V) goes to screen A (3V). The next screen position is AREF - leave it unused.', 10, '#a23028', True)
@@ -144,7 +144,7 @@ for i, (wire, feather, wing, purpose, color) in enumerate(wires):
     line(28, y+row_h, 764, y+row_h, '#d9e2e7')
 
 text(28, 570, 'Letters/colors are wire IDs, not pin numbers. Gray pins stay unconnected. Knob: keep its QT cable plugged into the Feather.', 8.1, MUTED)
-text(28, 581, 'Solder to the existing Feather pin joints; inspect for bridges. Screen square pads and matching sockets share the same signals.', 8.1, MUTED)
+text(28, 581, 'Male-header solder joints are usually on the component face. Match the drawing to the face you are looking at; inspect for bridges.', 8.1, MUTED)
 text(28, 592, 'Sources: Adafruit Feather RP2040 PCB + TFT FeatherWing V2 PCB / pinout guides. Layout is a reference; verify board labels.', 7.7, MUTED)
 
 # Output directories are created only when the generator is run.
