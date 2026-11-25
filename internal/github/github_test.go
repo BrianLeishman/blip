@@ -79,7 +79,7 @@ func TestOwnStatus(t *testing.T) {
 	if s != "ready" {
 		t.Fatal("no requests should await my merge")
 	}
-	item.ReviewRequests = []json.RawMessage{json.RawMessage(`{}`)}
+	item.ReviewRequests = []string{"reviewer"}
 	s, _, _ = OwnStatus(item, 0, 2)
 	if s != "mine" {
 		t.Fatal("pending review should stay in mine")
@@ -90,11 +90,25 @@ func TestOwnStatus(t *testing.T) {
 	}
 	item.ReviewDecision = "CHANGES_REQUESTED"
 	item.ReviewRequests = nil
-	s, _, _ = OwnStatus(item, 0, 2)
-	if s != "mine" {
-		t.Fatal("changes requested is not ready")
+	item.StatusCheckRollup = []Check{{Status: "COMPLETED", Conclusion: "FAILURE"}}
+	s, badge, detail := OwnStatus(item, 0, 2)
+	if s != "mine" || badge != "CHANGES" || !strings.Contains(detail, "changes requested") {
+		t.Fatalf("changes requested: %q %q %q", s, badge, detail)
+	}
+	item.MergeStateStatus = "DIRTY"
+	s, badge, detail = OwnStatus(item, 0, 2)
+	if s != "mine" || badge != "CONFLICT" || !strings.Contains(detail, "merge conflict") {
+		t.Fatalf("conflict must win over changes requested: %q %q %q", s, badge, detail)
 	}
 }
+func TestRebaseBlockedCountsAsConflict(t *testing.T) {
+	// GitHub reports MERGEABLE when a squash is clean but the rebase merge is not.
+	section, badge, _ := OwnStatus(Item{MergeStateStatus: "BLOCKED", RebaseBlocked: true}, 2, 2)
+	if section != "mine" || badge != "CONFLICT" {
+		t.Fatalf("got %q %q", section, badge)
+	}
+}
+
 func TestChecks(t *testing.T) {
 	if Checks([]Check{{Status: "QUEUED"}, {Conclusion: "FAILURE", Status: "COMPLETED"}}) != "!" {
 		t.Fatal("failure must take precedence")
@@ -135,8 +149,8 @@ func TestFailedChecksBlockEveryMergeReadyPath(t *testing.T) {
 		approvals int
 	}{
 		{"no review requests", Item{ReviewDecision: "REVIEW_REQUIRED"}, 0},
-		{"enough approvals", Item{ReviewRequests: []json.RawMessage{json.RawMessage(`{}`)}}, 2},
-		{"GitHub approved", Item{ReviewDecision: "APPROVED", ReviewRequests: []json.RawMessage{json.RawMessage(`{}`)}}, 1},
+		{"enough approvals", Item{ReviewRequests: []string{"reviewer"}}, 2},
+		{"GitHub approved", Item{ReviewDecision: "APPROVED", ReviewRequests: []string{"reviewer"}}, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, check := range []Check{

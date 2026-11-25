@@ -2,6 +2,7 @@ package github
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +30,7 @@ func TestUnreadHumanCommentsAndCache(t *testing.T) {
 	t.Setenv("CALLS", log)
 	fakeAlertsGH(t, `echo "$*" >> "$CALLS"
 case "$*" in
- *repos/Org/widget/pulls/7) ok "$PR" ;;
+ api\ graphql\ *) printf '%s\n' "$GQL" ;;
  *notifications\?*) ok "$THREADS" ;;
  *issues/7/comments*) ok '[{"id":1,"body":"old","created_at":"2026-10-05T09:00:00Z","user":{"login":"Old"}},{"id":2,"body":"seen","created_at":"2026-10-05T10:30:00Z","user":{"login":"Seen"}},{"id":3,"body":"self","created_at":"2026-10-05T12:30:00Z","user":{"login":"viewer"}},{"id":4,"body":"bot","created_at":"2026-10-05T14:30:00Z","user":{"login":"automation","type":"Bot"}},{"id":5,"body":"human","created_at":"2026-10-05T11:30:00Z","user":{"login":"Teammate"}}]' ;;
  *pulls/7/comments*) ok '[{"id":6,"body":"inline","created_at":"2026-10-05T12:00:00Z","user":{"login":"Reviewer"}},{"id":8,"body":"bot","created_at":"2026-10-05T16:00:00Z","user":{"login":"app[bot]"}}]' ;;
@@ -37,7 +38,14 @@ case "$*" in
  *) exit 1 ;;
 esac
 `)
-	t.Setenv("PR", `{"draft":false,"user":{"login":"Author"}}`)
+	setState := func(draft bool, merge, authorType, author string) {
+		t.Helper()
+		if authorType == "" {
+			authorType = "User"
+		}
+		t.Setenv("GQL", fmt.Sprintf(`{"data":{"p0":{"pullRequest":{"isDraft":%t,"mergeStateStatus":%q,"author":{"__typename":%q,"login":%q},"assignees":{"nodes":[]}}},"p1":{"pullRequest":{"isDraft":true,"mergeStateStatus":"CLEAN","author":{"__typename":"User","login":"Author"},"assignees":{"nodes":[]}}}}}`, draft, merge, authorType, author))
+	}
+	setState(false, "CLEAN", "User", "Author")
 	thread := notification{ID: "1", Unread: true, Reason: "subscribed", UpdatedAt: "2026-10-05T16:00:00Z", LastReadAt: "2026-10-05T11:00:00Z"}
 	thread.Repository.FullName = "Org/widget"
 	thread.Subject.Type = "PullRequest"
@@ -62,7 +70,10 @@ esac
 	workflow := thread
 	workflow.ID = "5"
 	workflow.Subject.Type = "CheckSuite"
-	setThreads([]notification{thread, foreign, archived, read, workflow})
+	other := thread
+	other.ID = "8"
+	other.Subject.URL = "https://api.github.com/repos/Org/widget/pulls/8"
+	setThreads([]notification{thread, other, foreign, archived, read, workflow})
 	client := NewClient(Config{Owners: []string{"Org"}, CommentsSince: "2026-10-05T10:00:00Z"})
 	for i := 0; i < 2; i++ {
 		rows, err := client.fetchAlerts(t.Context(), "Viewer")
@@ -80,6 +91,19 @@ esac
 	if strings.Count(string(calls), "issues/7/comments") != 1 {
 		t.Fatal("unchanged threads refetched comments")
 	}
+	gql := 0
+	for _, line := range strings.Split(string(calls), "\n") {
+		if !strings.Contains(line, "api graphql") {
+			continue
+		}
+		gql++
+		if strings.Count(line, "pullRequest(number:") != 2 || !strings.Contains(line, `p0:repository(owner:"Org",name:"widget"){rebaseMergeAllowed pullRequest(number:7)`) || !strings.Contains(line, `p1:repository(owner:"Org",name:"widget"){rebaseMergeAllowed pullRequest(number:8)`) {
+			t.Fatalf("pull states were not one query: %s", line)
+		}
+	}
+	if gql != 2 {
+		t.Fatalf("graphql calls = %d, want 1 per refresh", gql)
+	}
 	thread.UpdatedAt = "2026-10-05T17:00:00Z"
 	setThreads([]notification{thread})
 	if _, err := client.fetchAlerts(t.Context(), "Viewer"); err != nil {
@@ -90,19 +114,19 @@ esac
 		t.Fatal("new activity did not refresh comments")
 	}
 	// Changing draft status must hide a previously cached alert immediately.
-	t.Setenv("PR", `{"draft":true,"user":{"login":"Author"}}`)
+	setState(true, "CLEAN", "User", "Author")
 	rows, err := client.fetchAlerts(t.Context(), "Viewer")
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("draft retained cached comments: %#v %v", rows, err)
 	}
-	t.Setenv("PR", `{"draft":false,"user":{"login":"Author"}}`)
+	setState(false, "CLEAN", "User", "Author")
 	// Conflicts on somebody else's PR must not reappear as cached comment alerts.
-	t.Setenv("PR", `{"draft":false,"mergeable_state":"dirty","user":{"login":"Author"}}`)
+	setState(false, "DIRTY", "User", "Author")
 	rows, err = client.fetchAlerts(t.Context(), "Viewer")
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("conflict retained cached comments: %#v %v", rows, err)
 	}
-	t.Setenv("PR", `{"draft":false,"mergeable_state":"dirty","user":{"login":"Viewer"}}`)
+	setState(false, "DIRTY", "User", "Viewer")
 	rows, err = client.fetchAlerts(t.Context(), "Viewer")
 	if err != nil || len(rows) != 1 {
 		t.Fatalf("own conflict comment hidden: %#v %v", rows, err)
@@ -264,9 +288,9 @@ esac
 			n.Repository.FullName = "Org/widget"
 			n.Subject.Type = "PullRequest"
 			n.Subject.URL = "https://api.github.com/repos/Org/widget/pulls/7"
-			pr := commentPR{}
-			pr.User.Login = tc.author
-			rows, err := NewClient(Config{}).fetchThreadComments(t.Context(), n, "Viewer", "2026-10-05T00:00:00Z", pr)
+			item := Item{}
+			item.Author.Login = tc.author
+			rows, err := NewClient(Config{}).fetchThreadComments(t.Context(), n, "Viewer", "2026-10-05T00:00:00Z", item)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -307,4 +331,63 @@ esac
 			}
 		})
 	}
+}
+
+func TestNotificationPullState(t *testing.T) {
+	thread := notification{ID: "1", Unread: true, UpdatedAt: "2026-10-05T16:00:00Z", LastReadAt: "2026-10-05T11:00:00Z"}
+	thread.Repository.FullName = "Org/widget"
+	thread.Subject.Type = "PullRequest"
+	thread.Subject.Title = "Example change"
+	thread.Subject.URL = "https://api.github.com/repos/Org/widget/pulls/7"
+	body, err := json.Marshal([]notification{thread})
+	if err != nil {
+		t.Fatal(err)
+	}
+	comments := `[{"id":2,"body":"earlier","created_at":"2026-10-04T10:00:00Z","user":{"login":"Viewer"}},{"id":5,"body":"human","created_at":"2026-10-05T12:00:00Z","user":{"login":"Teammate"}}]`
+	script := `case "$*" in
+ api\ graphql\ *) printf '%s\n' "$GQL" ;;
+ *notifications\?*) ok "$THREADS" ;;
+ *issues/7/comments*) ok "$COMMENTS" ;;
+ *pulls/7/comments*) ok '[]' ;;
+ *pulls/7/reviews*) ok '[]' ;;
+ *) exit 1 ;;
+esac
+`
+	t.Run("bot author", func(t *testing.T) {
+		fakeAlertsGH(t, script)
+		t.Setenv("THREADS", string(body))
+		t.Setenv("COMMENTS", comments)
+		t.Setenv("GQL", `{"data":{"p0":{"pullRequest":{"isDraft":false,"mergeStateStatus":"DIRTY","author":{"__typename":"Bot","login":"dependabot"},"assignees":{"nodes":[]}}}}}`)
+		rows, err := NewClient(Config{Owners: []string{"Org"}, IncludeDependabot: true, CommentsSince: "2026-10-05T10:00:00Z"}).fetchAlerts(t.Context(), "Viewer")
+		if err != nil || len(rows) != 1 {
+			t.Fatalf("owned bot conflict: %#v %v", rows, err)
+		}
+		rows, err = NewClient(Config{Owners: []string{"Org"}, CommentsSince: "2026-10-05T10:00:00Z"}).fetchAlerts(t.Context(), "Viewer")
+		if err != nil || len(rows) != 0 {
+			t.Fatalf("unowned bot conflict: %#v %v", rows, err)
+		}
+	})
+	t.Run("missing pull request", func(t *testing.T) {
+		fakeAlertsGH(t, script)
+		t.Setenv("THREADS", string(body))
+		t.Setenv("GQL", `{"data":{"p0":{"pullRequest":null}}}`)
+		if _, err := NewClient(Config{Owners: []string{"Org"}, CommentsSince: "2026-10-05T10:00:00Z"}).fetchAlerts(t.Context(), "Viewer"); err == nil {
+			t.Fatal("null pull request was ignored")
+		}
+	})
+	t.Run("invalid repository", func(t *testing.T) {
+		fakeAlertsGH(t, script)
+		bad := thread
+		bad.Repository.FullName = "Org/bad~name"
+		bad.Subject.URL = "https://api.github.com/repos/Org/bad~name/pulls/7"
+		raw, err := json.Marshal([]notification{bad})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("THREADS", string(raw))
+		_, err = NewClient(Config{Owners: []string{"Org"}, CommentsSince: "2026-10-05T10:00:00Z"}).fetchAlerts(t.Context(), "Viewer")
+		if err == nil || !strings.Contains(err.Error(), "invalid notification subject URL") {
+			t.Fatal(err)
+		}
+	})
 }

@@ -27,15 +27,19 @@ type Config struct {
 	RequiredApprovals int                  `json:"required_approvals"`
 }
 type Item struct {
-	HeadRefOid                                              string
-	Number                                                  int
-	Title, URL, ReviewDecision, MergeStateStatus, UpdatedAt string
-	IsDraft                                                 bool
-	Author                                                  struct{ Login string }
-	Assignees                                               []struct{ Login string }
-	ReviewRequests                                          []json.RawMessage
-	Labels                                                  []struct{ Name string }
-	StatusCheckRollup                                       []Check
+	HeadRefOid                                         string
+	Number                                             int
+	Title, ReviewDecision, MergeStateStatus, UpdatedAt string
+	IsDraft                                            bool
+	// GitHub calls a PR mergeable when a squash is clean, even if the rebase merge the page offers is not.
+	RebaseBlocked     bool
+	Repository        string
+	Author            struct{ Login string }
+	Assignees         []struct{ Login string }
+	ReviewRequests    []string
+	Labels            []struct{ Name string }
+	StatusCheckRollup []Check
+	Reviews           []Review
 }
 type Review struct {
 	User        struct{ Login, Type string }
@@ -166,56 +170,69 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 	if err := Validate(c); err != nil {
 		return result, err
 	}
-	var viewer struct{ Login string }
-	if err := client.restJSON(ctx, &viewer, "user"); err != nil {
-		return result, err
-	}
-	if viewer.Login == "" {
-		return result, fmt.Errorf("GitHub returned an empty viewer login")
-	}
-	repositories, err := discoverRepositories(ctx, c)
+	viewer, pulled, err := client.searchPullRequests(ctx)
 	if err != nil {
 		return result, err
 	}
+	// Results arrive grouped by search, not by repository. Stable-sort by repository
+	// so each repo's owned rows stay ahead of the next repo.
+	sort.SliceStable(pulled, func(i, j int) bool {
+		return pulled[i].item.Repository < pulled[j].item.Repository
+	})
 	order := map[string]reviewOrder{}
-	// Fetch up to four repositories concurrently; collect in input order so
-	// network completion order never reshuffles the display.
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	type repoResult struct {
-		result Result
-		order  map[string]reviewOrder
-		err    error
-	}
-	results := make([]repoResult, len(repositories))
-	slots := make(chan struct{}, 4)
-	var workers sync.WaitGroup
-	for i, repo := range repositories {
-		workers.Add(1)
-		go func() {
-			defer workers.Done()
-			select {
-			case slots <- struct{}{}:
-				defer func() { <-slots }()
-			case <-ctx.Done():
-				results[i].err = ctx.Err()
-				return
+	for _, pr := range pulled {
+		item := pr.item
+		repo := item.Repository
+		id := repo + "/pull/" + strconv.Itoa(item.Number)
+		if _, exists := result.URLs[id]; exists {
+			continue
+		}
+		if item.IsDraft || !item.visibleTo(viewer, c) {
+			continue
+		}
+		if pr.section == "review" {
+			if item.conflicted() {
+				continue
 			}
-			results[i].result, results[i].order, results[i].err = client.fetchRepository(ctx, c, repo, viewer.Login)
-		}()
-	}
-	workers.Wait()
-	for _, r := range results {
-		if r.err != nil {
-			return result, r.err
+			switch Checks(item.StatusCheckRollup) {
+			case "!", "~":
+				continue
+			}
 		}
-		result.Snapshot.Rows = append(result.Snapshot.Rows, r.result.Snapshot.Rows...)
-		for id, link := range r.result.URLs {
-			result.URLs[id] = link
+		if pr.restReviews {
+			item.Reviews, err = restAll[Review](ctx, client, fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number))
+			if err != nil {
+				return result, err
+			}
 		}
-		for id, priority := range r.order {
-			order[id] = priority
+		var reviews []Review
+		for _, r := range item.Reviews {
+			if r.User.Login != item.Author.Login {
+				reviews = append(reviews, r)
+			}
 		}
+		item.Reviews = reviews
+		n := Approvals(reviews)
+		rowSection := pr.section
+		badge := fmt.Sprintf("%d/%d", n, c.RequiredApprovals)
+		detail := "Review requested from you"
+		if pr.section == "review" {
+			if n >= c.RequiredApprovals {
+				continue
+			}
+		} else {
+			rowSection, badge, detail = OwnStatus(item, n, c.RequiredApprovals)
+		}
+		// Construct a known GitHub URL instead of accepting arbitrary serial URLs.
+		link := "https://github.com/" + repo + "/pull/" + strconv.Itoa(item.Number)
+		row := dashboard.Row{ID: id, Section: rowSection, Title: item.Title, Badge: badge, Detail: detail, ChecksRunning: ChecksRunning(item.StatusCheckRollup)}
+		row.Activity = activityToken(struct {
+			Item Item
+			Row  dashboard.Row
+		}{item, row})
+		result.Snapshot.Rows = append(result.Snapshot.Rows, row)
+		result.URLs[id] = link
+		order[id] = reviewOrder{approvals: n, updatedAt: item.UpdatedAt}
 	}
 
 	if c.UrgentQuery != "" {
@@ -230,7 +247,7 @@ func (client *Client) Fetch(ctx context.Context) (Result, error) {
 			}
 		}
 	}
-	alerts, err := client.fetchAlerts(ctx, viewer.Login)
+	alerts, err := client.fetchAlerts(ctx, viewer)
 	if err != nil {
 		return result, err
 	}
@@ -257,76 +274,8 @@ func SafeURL(raw string) bool {
 	return err == nil && u.Scheme == "https" && u.Host == "github.com" && u.User == nil
 }
 
-func (client *Client) fetchRepository(ctx context.Context, c Config, repo, viewer string) (Result, map[string]reviewOrder, error) {
-	result := Result{URLs: map[string]string{}}
-	order := map[string]reviewOrder{}
-	for _, query := range prQueries(c) {
-		var items []Item
-		var args []string
-		args = []string{"pr", "list", "--repo", repo, "--state", "open", "--limit", "1000", "--json", "number,title,url,isDraft,reviewDecision,mergeStateStatus,updatedAt,headRefOid,author,assignees,reviewRequests,labels,statusCheckRollup"}
-		if query.author != "" {
-			args = append(args, "--author", query.author)
-		} else {
-			args = append(args, "--search", "is:open -is:draft review-requested:@me sort:updated-asc")
-		}
-
-		if err := gh(ctx, &items, args...); err != nil {
-			return result, order, fmt.Errorf("%s %s author=%q: %w", repo, query.section, query.author, err)
-		}
-		for _, item := range items {
-			id := repo + "/pull/" + strconv.Itoa(item.Number)
-			if _, exists := result.URLs[id]; exists {
-				continue
-			}
-			if item.IsDraft || !item.visibleTo(viewer, c) {
-				continue
-			}
-			if query.section == "review" {
-				if item.MergeStateStatus == "DIRTY" {
-					continue
-				}
-				switch Checks(item.StatusCheckRollup) {
-				case "!", "~":
-					continue
-				}
-			}
-			all, err := restAll[Review](ctx, client, fmt.Sprintf("repos/%s/pulls/%d/reviews?per_page=100", repo, item.Number))
-			if err != nil {
-				return result, order, err
-			}
-			var reviews []Review
-			for _, r := range all {
-				if r.User.Login != item.Author.Login {
-					reviews = append(reviews, r)
-				}
-			}
-			n := Approvals(reviews)
-			rowSection := query.section
-			badge := fmt.Sprintf("%d/%d", n, c.RequiredApprovals)
-			detail := "Review requested from you"
-			if query.section == "review" {
-				if n >= c.RequiredApprovals {
-					continue
-				}
-			} else {
-				rowSection, badge, detail = OwnStatus(item, n, c.RequiredApprovals)
-			}
-			kind := "pull"
-
-			// Construct a known GitHub URL instead of accepting arbitrary serial URLs.
-			link := "https://github.com/" + repo + "/" + kind + "/" + strconv.Itoa(item.Number)
-			row := dashboard.Row{ID: id, Section: rowSection, Title: item.Title, Badge: badge, Detail: detail, ChecksRunning: ChecksRunning(item.StatusCheckRollup)}
-			row.Activity = activityToken(struct {
-				Item    Item
-				Reviews []Review
-				Row     dashboard.Row
-			}{item, reviews, row})
-			result.Snapshot.Rows = append(result.Snapshot.Rows, row)
-			result.URLs[id] = link
-			order[id] = reviewOrder{approvals: n, updatedAt: item.UpdatedAt}
-		}
-	}
-	return result, order, nil
+func (item Item) conflicted() bool {
+	return item.MergeStateStatus == "DIRTY" || item.RebaseBlocked
 }
 
 func (item Item) ownedBy(viewer string, c Config) bool {

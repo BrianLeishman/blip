@@ -258,7 +258,7 @@ func paintRows(force bool) {
 		}
 		frame.Badge = ascii(r.Badge, 8)
 		frame.BadgeColor = frame.MarkerColor
-		if strings.HasSuffix(r.Badge, "FAIL") || r.Badge == "CONFLICT" {
+		if strings.HasSuffix(r.Badge, "FAIL") || r.Badge == "CONFLICT" || r.Badge == "CHANGES" {
 			frame.BadgeColor = red
 		}
 		if r.ChecksRunning {

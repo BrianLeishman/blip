@@ -60,13 +60,6 @@ type comment struct {
 	User        struct{ Login, Type string }
 }
 
-type commentPR struct {
-	Draft          bool
-	User           struct{ Login string }
-	MergeableState string `json:"mergeable_state"`
-	Assignees      []struct{ Login string }
-}
-
 type cachedComments struct {
 	signature string
 	rows      []dashboard.Row
@@ -106,6 +99,55 @@ func positiveNumber(s string) bool {
 	return true
 }
 
+// GitHub answers many pull requests in one request; 100 keeps each request small.
+const pullStateBatch = 100
+
+// pullStates reads the draft, conflict and ownership state of "owner/name/pull/N" ids.
+// Every part of an id must already be validated: it is written into the query text.
+func pullStates(ctx context.Context, ids []string) (map[string]Item, error) {
+	states := map[string]Item{}
+	for start := 0; start < len(ids); start += pullStateBatch {
+		batch := ids[start:min(start+pullStateBatch, len(ids))]
+		var query strings.Builder
+		query.WriteString("query{")
+		for i, id := range batch {
+			parts := strings.Split(id, "/")
+			fmt.Fprintf(&query, "p%d:repository(owner:%q,name:%q){rebaseMergeAllowed pullRequest(number:%s){isDraft mergeStateStatus canBeRebased author{__typename login} assignees(first:100){nodes{login}}}}", i, parts[0], parts[1], parts[3])
+		}
+		query.WriteString("}")
+		var response struct {
+			Data map[string]struct {
+				RebaseMergeAllowed bool
+				PullRequest        *struct {
+					IsDraft          bool
+					MergeStateStatus string
+					CanBeRebased     bool
+					Author           graphQLActor
+					Assignees        struct{ Nodes []struct{ Login string } }
+				}
+			}
+			Errors []struct{ Message string }
+		}
+		if err := gh(ctx, &response, "api", "graphql", "-f", "query="+query.String()); err != nil {
+			return nil, err
+		}
+		if len(response.Errors) > 0 {
+			return nil, fmt.Errorf("notification pull request query: %s", response.Errors[0].Message)
+		}
+		for i, id := range batch {
+			repo := response.Data[fmt.Sprintf("p%d", i)]
+			pr := repo.PullRequest
+			if pr == nil {
+				return nil, fmt.Errorf("notification pull request %s missing", id)
+			}
+			item := Item{IsDraft: pr.IsDraft, MergeStateStatus: pr.MergeStateStatus, RebaseBlocked: repo.RebaseMergeAllowed && !pr.CanBeRebased, Assignees: pr.Assignees.Nodes}
+			item.Author.Login = pr.Author.login()
+			states[id] = item
+		}
+	}
+	return states, nil
+}
+
 func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboard.Row, error) {
 	var threads []notification
 	if client.config.CommentsSince != "" {
@@ -120,30 +162,34 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 	tasks := make([]func() ([]dashboard.Row, error), 0)
 	var cacheMu sync.Mutex
 	active := map[string]bool{}
+	// One batched lookup after the loop fills this; the tasks run after that.
+	var pulls map[string]Item
+	var pullIDs []string
 	for _, n := range threads {
 		if !n.Unread || n.Repository.Archived || !client.config.includesRepository(n.Repository.FullName) || (n.Subject.Type != "Issue" && n.Subject.Type != "PullRequest") {
 			continue
 		}
 		active[n.ID] = true
 		signature := n.UpdatedAt + "/" + n.LastReadAt + "/" + n.Subject.Title + "/" + n.Reason
+		pullID := ""
+		if n.Subject.Type == "PullRequest" {
+			_, number, ok := subjectPath(n.Subject.URL, n.Repository.FullName, "pulls")
+			if !ok || !ValidRepository(n.Repository.FullName) {
+				return nil, fmt.Errorf("invalid notification subject URL")
+			}
+			pullID = n.Repository.FullName + "/pull/" + number
+			pullIDs = append(pullIDs, pullID)
+		}
 		tasks = append(tasks, func() ([]dashboard.Row, error) {
-			var pr commentPR
-			if n.Subject.Type == "PullRequest" {
-				path, _, ok := subjectPath(n.Subject.URL, n.Repository.FullName, "pulls")
-				if !ok {
-					return nil, fmt.Errorf("invalid notification subject URL")
-				}
+			var pr Item
+			if pullID != "" {
 				// Draft changes need not create a notification. Check current PR state
 				// even when its comment contents are already cached.
-				if err := client.restJSON(ctx, &pr, path); err != nil {
-					return nil, err
-				}
-				if pr.Draft {
+				pr = pulls[pullID]
+				if pr.IsDraft {
 					return nil, nil
 				}
-				item := Item{Assignees: pr.Assignees}
-				item.Author.Login = pr.User.Login
-				if strings.EqualFold(pr.MergeableState, "dirty") && !item.ownedBy(viewer, client.config) {
+				if pr.conflicted() && !pr.ownedBy(viewer, client.config) {
 					return nil, nil
 				}
 			}
@@ -161,6 +207,10 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 			}
 			return rows, err
 		})
+	}
+	var err error
+	if pulls, err = pullStates(ctx, pullIDs); err != nil {
+		return nil, err
 	}
 	for id := range client.comments {
 		if !active[id] {
@@ -231,7 +281,7 @@ func (client *Client) fetchAlerts(ctx context.Context, viewer string) ([]dashboa
 	return rows, nil
 }
 
-func (client *Client) fetchThreadComments(ctx context.Context, n notification, viewer, since string, pr commentPR) ([]dashboard.Row, error) {
+func (client *Client) fetchThreadComments(ctx context.Context, n notification, viewer, since string, pr Item) ([]dashboard.Row, error) {
 	kind := "issues"
 	browserKind := "issues"
 	if n.Subject.Type == "PullRequest" {
@@ -258,7 +308,7 @@ func (client *Client) fetchThreadComments(ctx context.Context, n notification, v
 		row dashboard.Row
 	}
 	var dated []datedRow
-	participated := strings.EqualFold(pr.User.Login, viewer)
+	participated := strings.EqualFold(pr.Author.Login, viewer)
 	mentioned := false
 	for _, s := range sources {
 		comments, err := restAll[comment](ctx, client, "repos/"+n.Repository.FullName+"/"+s.path)

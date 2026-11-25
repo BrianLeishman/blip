@@ -6,8 +6,8 @@ import (
 )
 
 type Check struct {
-	Status, Conclusion, State                                                            string
-	Name, Context, DetailsUrl, TargetUrl, StartedAt, CompletedAt, CreatedAt, Description string
+	Status, Conclusion, State                        string
+	Name, Context, StartedAt, CompletedAt, CreatedAt string
 }
 
 // ChecksRunning is independent of failure: other jobs may still be running.
@@ -43,7 +43,7 @@ func Checks(checks []Check) string {
 func OwnStatus(item Item, approvals, required int) (section, badge, detail string) {
 	section = "mine"
 	ci := Checks(item.StatusCheckRollup)
-	if ci != "!" && item.MergeStateStatus != "DIRTY" && item.ReviewDecision != "CHANGES_REQUESTED" && (approvals >= required || item.ReviewDecision == "APPROVED" || len(item.ReviewRequests) == 0) {
+	if ci != "!" && !item.conflicted() && item.ReviewDecision != "CHANGES_REQUESTED" && (approvals >= required || item.ReviewDecision == "APPROVED" || len(item.ReviewRequests) == 0) {
 		section = "ready"
 	}
 	lgtm := "-"
@@ -62,14 +62,15 @@ func OwnStatus(item Item, approvals, required int) (section, badge, detail strin
 	}
 	if item.ReviewDecision == "CHANGES_REQUESTED" {
 		waiting = "changes requested"
+		badge = "CHANGES"
 	}
-	if item.MergeStateStatus == "DIRTY" {
+	if item.conflicted() {
 		badge = "CONFLICT"
 		waiting = "merge conflict"
 	}
 	ciText := map[string]string{"!": "FAIL", "~": "WAIT", "+": "OK", "?": "?"}[ci]
 	detail = fmt.Sprintf("#%d LGTM%s CI:%s / %s", item.Number, lgtm, ciText, waiting)
-	if item.MergeStateStatus == "DIRTY" {
+	if item.conflicted() {
 		detail = fmt.Sprintf("#%d %d/%d LGTM%s CI:%s / merge conflict", item.Number, approvals, required, lgtm, ciText)
 	}
 	return
