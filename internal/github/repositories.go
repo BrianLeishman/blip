@@ -33,7 +33,7 @@ func prQueries(c Config) []prQuery {
 // GitHub caps one GraphQL request at 500,000 nodes, and additional authors are unbounded.
 const searchBatch = 8
 
-const prFragment = `fragment pr on PullRequest{number title isDraft reviewDecision mergeStateStatus canBeRebased updatedAt headRefOid repository{nameWithOwner rebaseMergeAllowed} author{__typename login} assignees(first:100){nodes{login}} reviewRequests(first:100){nodes{requestedReviewer{__typename ...on User{login} ...on Bot{login} ...on Team{slug}}}} labels(first:100){nodes{name}} reviews(last:100){pageInfo{hasPreviousPage} nodes{state submittedAt author{__typename login}}} commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){pageInfo{hasNextPage} nodes{__typename ...on CheckRun{name status conclusion startedAt completedAt} ...on StatusContext{context state createdAt}}}}}}}}`
+const prFragment = `fragment pr on PullRequest{number title isDraft reviewDecision mergeable mergeStateStatus canBeRebased updatedAt headRefOid repository{nameWithOwner rebaseMergeAllowed} author{__typename login} assignees(first:100){nodes{login}} reviewRequests(first:100){nodes{requestedReviewer{__typename ...on User{login} ...on Bot{login} ...on Team{slug}}}} labels(first:100){nodes{name}} reviews(last:100){pageInfo{hasPreviousPage} nodes{state submittedAt author{__typename login}}} commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){pageInfo{hasNextPage} nodes{__typename ...on CheckRun{name status conclusion startedAt completedAt} ...on StatusContext{context state createdAt}}}}}}}}`
 
 // GraphQL reports a bot as login "dependabot" plus type Bot. Callers still compare
 // the historical dependabot[bot] and app/dependabot forms.
@@ -57,6 +57,7 @@ type gqlPR struct {
 	MergeStateStatus string
 	UpdatedAt        string
 	HeadRefOid       string
+	Mergeable        string
 	CanBeRebased     bool
 	Repository       struct {
 		NameWithOwner      string
@@ -304,7 +305,9 @@ func (n gqlPR) item() (Item, bool, error) {
 		UpdatedAt:        n.UpdatedAt,
 		IsDraft:          n.IsDraft,
 		Repository:       repo,
-		RebaseBlocked:    n.Repository.RebaseMergeAllowed && !n.CanBeRebased,
+		// canBeRebased is also false while GitHub recomputes mergeability after a push
+		// to the base branch (mergeable UNKNOWN). That is not a conflict.
+		RebaseBlocked: n.Repository.RebaseMergeAllowed && n.Mergeable == "MERGEABLE" && !n.CanBeRebased,
 	}
 	if len(n.Commits.Nodes) > 0 {
 		contexts := n.Commits.Nodes[0].Commit.StatusCheckRollup.Contexts

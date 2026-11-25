@@ -112,7 +112,7 @@ func pullStates(ctx context.Context, ids []string) (map[string]Item, error) {
 		query.WriteString("query{")
 		for i, id := range batch {
 			parts := strings.Split(id, "/")
-			fmt.Fprintf(&query, "p%d:repository(owner:%q,name:%q){rebaseMergeAllowed pullRequest(number:%s){isDraft mergeStateStatus canBeRebased author{__typename login} assignees(first:100){nodes{login}}}}", i, parts[0], parts[1], parts[3])
+			fmt.Fprintf(&query, "p%d:repository(owner:%q,name:%q){rebaseMergeAllowed pullRequest(number:%s){isDraft mergeable mergeStateStatus canBeRebased author{__typename login} assignees(first:100){nodes{login}}}}", i, parts[0], parts[1], parts[3])
 		}
 		query.WriteString("}")
 		var response struct {
@@ -121,6 +121,7 @@ func pullStates(ctx context.Context, ids []string) (map[string]Item, error) {
 				PullRequest        *struct {
 					IsDraft          bool
 					MergeStateStatus string
+					Mergeable        string
 					CanBeRebased     bool
 					Author           graphQLActor
 					Assignees        struct{ Nodes []struct{ Login string } }
@@ -140,7 +141,7 @@ func pullStates(ctx context.Context, ids []string) (map[string]Item, error) {
 			if pr == nil {
 				return nil, fmt.Errorf("notification pull request %s missing", id)
 			}
-			item := Item{IsDraft: pr.IsDraft, MergeStateStatus: pr.MergeStateStatus, RebaseBlocked: repo.RebaseMergeAllowed && !pr.CanBeRebased, Assignees: pr.Assignees.Nodes}
+			item := Item{IsDraft: pr.IsDraft, MergeStateStatus: pr.MergeStateStatus, RebaseBlocked: repo.RebaseMergeAllowed && pr.Mergeable == "MERGEABLE" && !pr.CanBeRebased, Assignees: pr.Assignees.Nodes}
 			item.Author.Login = pr.Author.login()
 			states[id] = item
 		}
